@@ -12,6 +12,8 @@ from tqdm.notebook import tqdm
 from openai import OpenAI
 import editdistance
 from dataclasses import dataclass
+from stanza.models.common.doc import Document
+from stanza.pipeline.core import Pipeline
 
 import srt
 from srt import Subtitle
@@ -32,6 +34,11 @@ from sonar.models.sonar_text import load_sonar_text_encoder_model , load_sonar_t
 from sonar.inference_pipelines.text import TextToEmbeddingModelPipeline
 from sonar.inference_pipelines.speech import SpeechToEmbeddingModelPipeline
 
+opener = urllib.request.build_opener()
+opener.addheaders = [('User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWeb'),
+            ('User-agent', 'Kit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safa'),
+            ('User-agent', 'ri/537.36')]
+urllib.request.install_opener(opener)
 
 class ScrapeUtilityVariableStorage:
     CPU_DEVICE : torch.device = torch.device("cpu")
@@ -68,98 +75,78 @@ class ScrapeUtilityVariableStorage:
         'vi' : 'sonar_speech_encoder_base_vie', # vietnamese
         'ko' : 'sonar_speech_encoder_base_kor', # korean
         'fi' : 'sonar_speech_encoder_base_fin', # finnish
-        'ur' : 'sonar_speech_encoder_base_urd' # Urdu
+        'ur' : 'sonar_speech_encoder_base_urd'  # Urdu
     }
 
     SONAR_SPEECH_ENCODER_LANG_MAP : dict [str, str] = {
-        'fa' : 'pes_Arab', # persian
-        'en' : 'eng_Latn', # english
-        'de' : 'deu_Latn', # german
-        'fr' : 'fra_Latn', # france
-        'es' : 'spa_Latn', # spanish
-        'it' : 'ita_Latn', # italian
-        'ar' : 'arb_Arab', # arabic
-        'pt' : 'por_Latn', # portuguese
-        'ru' : 'rus_Cyrl', # russian
-        'tr' : 'tur_Latn', # turkish
-        'uk' : 'ukr_Cyrl', # ukrainian
-        'pl' : 'pol_Latn', # polish
-        'zh' : 'zho_Hans', # chinese
-        'hi' : 'hin_Deva', # hindi
-        'bn' : 'ben_Beng', # bengali
-        'ja' : 'jpn_Jpan', # japanese
-        'vi' : 'vie_Latn', # vietnamese
-        'ko' : 'kor_Hang', # korean
-        'fi' : 'fin_Latn', # finnish
-        'ga' : 'gle_Latn', # Irish
-        'ur' : 'urd_Arab' # Urdu
+        'fa' : 'pes_Arab',      # persian
+        'en' : 'eng_Latn',      # english
+        'de' : 'deu_Latn',      # german
+        'fr' : 'fra_Latn',      # france
+        'es' : 'spa_Latn',      # spanish
+        'it' : 'ita_Latn',      # italian
+        'ar' : 'arb_Arab',      # arabic
+        'pt' : 'por_Latn',      # portuguese
+        'ru' : 'rus_Cyrl',      # russian
+        'tr' : 'tur_Latn',      # turkish
+        'uk' : 'ukr_Cyrl',      # ukrainian
+        'pl' : 'pol_Latn',      # polish
+        'zh' : 'zho_Hans',      # chinese
+        'hi' : 'hin_Deva',      # hindi
+        'bn' : 'ben_Beng',      # bengali
+        'ja' : 'jpn_Jpan',      # japanese
+        'vi' : 'vie_Latn',      # vietnamese
+        'ko' : 'kor_Hang',      # korean
+        'fi' : 'fin_Latn',      # finnish
+        'ur' : 'urd_Arab'       # Urdu
+    }
+
+    SUBDL_LANG_CODES : dict [str, list[str]] = {
+        'fa' : ['FA'],          # persian
+        'en' : ['EN'],          # english
+        'de' : ['DE', 'EN_DE'], # german
+        'fr' : ['FR'],          # france
+        'es' : ['ES'],          # spanish
+        'it' : ['IT'],          # italian
+        'ar' : ['AR'],          # arabic
+        'pt' : ['PT'],          # portuguese
+        'ru' : ['RU'],          # russian
+        'tr' : ['TR'],          # turkish
+        'uk' : ['UK'],          # ukrainian
+        'pl' : ['PL'],          # polish
+        'zh' : ['ZH_BG', 'ZH'], # chinese
+        'hi' : ['HI'],          # hindi
+        'bn' : ['BN'],          # bengali
+        'ja' : ['JA'],          # japanese
+        'vi' : ['VI'],          # vietnamese
+        'ko' : ['KO'],          # korean
+        'fi' : ['FI'],          # finnish
+        'ur' : ['UR']           # Urdu
     }
 
     SUBDL_LANGUAGE_MAP : dict[str, str] = {
-    "AR": "Arabic",
-    "BR_PT": "Brazillian Portuguese",
-    "DA": "Danish",
-    "NL": "Dutch",
-    "EN": "English",
-    "FA": "Farsi_Persian",
-    "FI": "Finnish",
-    "FR": "French",
-    "ID": "Indonesian",
-    "IT": "Italian",
-    "NO": "Norwegian",
-    "RO": "Romanian",
-    "ES": "Spanish",
-    "SV": "Swedish",
-    "VI": "Vietnamese",
-    "SQ": "Albanian",
-    "AZ": "Azerbaijani",
-    "BE": "Belarusian",
-    "BN": "Bengali",
-    "ZH_BG": "Big 5 code",
-    "BS": "Bosnian",
-    "BG": "Bulgarian",
-    "BG_EN": "Bulgarian_English",
-    "MY": "Burmese",
-    "CA": "Catalan",
-    "ZH": "Chinese BG code",
-    "HR": "Croatian",
-    "CS": "Czech",
-    "NL_EN": "Dutch_English",
-    "EN_DE": "English_German",
-    "EO": "Esperanto",
-    "ET": "Estonian",
-    "KA": "Georgian",
-    "DE": "German",
-    "EL": "Greek",
-    "KL": "Greenlandic",
-    "HE": "Hebrew",
-    "HI": "Hindi",
-    "HU": "Hungarian",
-    "HU_EN": "Hungarian_English",
-    "IS": "Icelandic",
-    "JA": "Japanese",
-    "KO": "Korean",
-    "KU": "Kurdish",
-    "LV": "Latvian",
-    "LT": "Lithuanian",
-    "MK": "Macedonian",
-    "MS": "Malay",
-    "ML": "Malayalam",
-    "MNI": "Manipuri",
-    "PL": "Polish",
-    "PT": "Portuguese",
-    "RU": "Russian",
-    "SR": "Serbian",
-    "SI": "Sinhala",
-    "SK": "Slovak",
-    "SL": "Slovenian",
-    "TL": "Tagalog",
-    "TA": "Tamil",
-    "TE": "Telugu",
-    "TH": "Thai",
-    "TR": "Turkish",
-    "UK": "Ukranian",
-    "UR": "Urdu"
+    "farsi_persian" : 'fa',     # persian
+    "english" : 'en',           # english
+    "english_german" : 'de',    # german
+    "german" : 'de',            # german
+    "french" : 'fr',            # france
+    "spanish" : 'es',           # spanish
+    "italian" : 'it',           # italian
+    "arabic" : 'ar',            # arabic
+    "portuguese" : 'pt',        # portuguese
+    "russian" : 'ru',           # russian
+    "turkish" : 'tr',           # turkish
+    "ukranian" : 'uk',          # ukrainian
+    "polish": 'pl',             # polish
+    "big 5 code": 'zh',         # chinese
+    "chinese bg code" : 'zh',   # chinese
+    "hindi" : "hi",             # hindi
+    "bengali" : "bn",           # bengali
+    "japanese" : "ja",          # japanese
+    "vietnamese" : "vi",        # vietnamese
+    "korean" : "ko",            # korean
+    "finnish" : "fi",           # finnish
+    "urdu" : "ur"               # Urdu
 }
 
 
@@ -219,8 +206,8 @@ def compute_similarity(audio_array: np.array, sample_rate: int, subtitle: Subtit
 
 def compute_batch_speech_embedding(audio_array: np.array, sample_rate: float, subtitle_list: list[Subtitle], speech_embedding_model:SpeechToEmbeddingModelPipeline, speech_embedding_batch_size: int):
     _audio_array_list = []
-    for subtitle in subtitle_list:
-        _audio_array = extract_segment_from_array(audio_array, sample_rate, subtitle)
+    for _subtitle in subtitle_list:
+        _audio_array = extract_segment_from_array(audio_array, sample_rate, _subtitle)
         _audio_array_list.append(torch.Tensor(_audio_array).unsqueeze(dim=0).cuda())
     _speech_embeddings = speech_embedding_model.predict(_audio_array_list, batch_size=speech_embedding_batch_size)
     return _speech_embeddings
@@ -256,53 +243,62 @@ def find_movies_subdl(title: str, year: int):
     _response['results'].sort(key=lambda x: x['score'])
     return _response['results']
 
-def find_subtitle(title: str, year: int, languages: list[str], subdl_api_key: str):
+class SubdlException(Exception):
+    def __init__(self, message) -> None:
+        super(Exception, self).__init__(message)
+ 
+
+def find_subtitle(title: str, year: int, languages: list[str]):
     _languages_subdl = ','.join(languages)
-    _payload = {'api_key': subdl_api_key, 'film_name' : title, 'languages' : _languages_subdl}
+    _payload = {'api_key': ScrapeUtilityVariableStorage.SUBDL_API_KEY, 'film_name' : title, 'languages' : _languages_subdl}
     if type(year) == int and year >= 1800 and year <= 2024:
         _payload['year'] = year
     _response = requests.get(ScrapeUtilityVariableStorage.SUBDL_SEARCH_SUBTITLE_URL, params=_payload).json()
+    if _response.status_code != 200:
+        raise 
     if _response['status'] == False:
-        return []
+        raise SubdlException()
     else:
         return _response['subtitles']
 
-def download_subtitle_subdl(movie, languages: list[str], processed_langs, max_subtitle_movie_try: int):
-    _movie_id = get_movie_id(movie)
+def extract_title_year_from_30nama_title(movie):
     _title_subdl = movie['title'][:-5]
     _year_subdl = int(movie['title'][-4:])
+    return _title_subdl, _year_subdl
+
+def download_subtitle_subdl(movie, languages: list[str], processed_langs, max_subtitle_movie_try: int):
+    _movie_id = get_movie_id(movie)
+    _title_subdl, _year_subdl = extract_title_year_from_30nama_title(movie)
     _posible_movies = find_movies_subdl(_title_subdl, _year_subdl, languages)
     for idx_posible_movie_id, _posible_movie in enumerate(_posible_movies[:max_subtitle_movie_try]):
         _subdl_subtitles = find_subtitle(_posible_movie['name'] ,_posible_movie['year'])
         for _subtitle_id, _subtitle in enumerate(_subdl_subtitles):
-            if _subtitle['lang'] == 'farsi_persian':
-                subtitle_link_lang = 'fa'
-            elif _subtitle['lang'] == 'english':
-                subtitle_link_lang = 'en'
+            if _subtitle['lang'].lower() in ScrapeUtilityVariableStorage.SUBDL_LANGUAGE_MAP:
+                _subtitle_lang = ScrapeUtilityVariableStorage.SUBDL_LANGUAGE_MAP[_subtitle['lang'].lower()]
             else:
-                raise Exception(f"this language ({_subtitle['lang']}) is  not supported.")
-            try:
-                if subtitle_link_lang in processed_langs or (subtitle_link_lang not in languages):
-                    break
-                if _subtitle['url']:
-                    create_directory(f'./temp/{_movie_id}/')
-                    zip_path = f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{subtitle_link_lang}.zip'
-                    if not os.path.isfile(zip_path):
-                        zipped_url = ScrapeUtilityVariableStorage.SUBDL_SUBTITLE_DOWNLOAD_URL + '/' + _subtitle['url']
-                        opener = urllib.request.build_opener()
-                        opener.addheaders = [('User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWeb'),
-                                    ('User-agent', 'Kit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safa'),
-                                    ('User-agent', 'ri/537.36')]
-                        urllib.request.install_opener(opener)
-                        urllib.request.urlretrieve(zipped_url,zip_path)
-                        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                            zip_ref.extractall(f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{subtitle_link_lang}/')
-                    srt_list = glob.glob(f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{subtitle_link_lang}/?*.srt')
-                    if len(srt_list) > 0:
-                        yield srt_list[0], subtitle_link_lang
-                    subtitle_exist = True
-            except Exception as e:
+                logging.warn(f"this language({_subtitle['lang'].lower()}) is  not supported in our snippet but was returned by the api.")
                 continue
+            if _subtitle_lang in processed_langs:
+                continue
+            if (_subtitle_lang not in languages):
+                logging.warn(f"this language ({_subtitle['lang'].lower()}) is not wanted but is in the subdl api results.
+                             \npossible movie: {_posible_movie['name']}\n 
+                             possible movie year{_posible_movie['year']}\n returned subtitle object : {_subtitle}\n")
+                continue
+            create_directory(f'./temp/{_movie_id}/')
+            if not _subtitle['url']:
+                raise Exception(f"empty subtitle url {_subtitle['url']} is not wanted but is in the subdl api results.")
+            _zip_path = f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang}.zip'
+            if os.path.isfile(_zip_path):
+                continue
+            _zipped_url = ScrapeUtilityVariableStorage.SUBDL_SUBTITLE_DOWNLOAD_URL + '/' + _subtitle['url']
+            # catch exception
+            urllib.request.urlretrieve(_zipped_url,_zip_path)
+            with zipfile.ZipFile(_zip_path, 'r') as _zip_ref:
+                _zip_ref.extractall(f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang}/')
+                _srt_list = glob.glob(f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang}/?*.srt')
+                if len(_srt_list) > 0:
+                    yield _srt_list[0], _subtitle_lang
 
 def get_movie_id(movie):
     return movie["page_num"] * 100 + movie["index"]
@@ -315,7 +311,7 @@ def download_video_file(download_bar, download_bar_index, movie, sampling_rate :
         _movie_extention = _download_link.split('/')[-1].split('.')[-1]
         _video_file_path = f'./temp/{movie_id}/{download_bar_index}.{_movie_extention}'
         urllib.request.urlretrieve(_download_link, _video_file_path, ShowProgressUrllib())
-        ffmpeg.input(_video_file_path).output(f'./dataset/{movie_id}/all.wav', ac=1, ar=sampling_rate).run()
+        ffmpeg.input(_video_file_path).output(f'./dataset/{movie_id}/all.mp3', ac=1, ar=sampling_rate).run()
         return True
 
 # def load_speech_model_in_gpu():
@@ -361,7 +357,7 @@ def get_parallel_data(audio_array: np.array, sample_rate: int, subtitle_list: li
         return processed_subtitles, similarities
     return processed_subtitles, torch.full((len(processed_subtitles),),0.1)
 
-def is_segments_continous_batch(segments_list):
+def algo_1(segments_list):
     _is_contimous_list = []
     _index_to_be_computed = []
     _final_output_dict = {}
@@ -397,23 +393,27 @@ def is_segments_continous_batch(segments_list):
     return _is_contimous_list
 
 def load_subtitle_file(subtitle_path):
-    subtitle_encoding  = predict_encoding(subtitle_path)
+    _subtitle_encoding  = predict_encoding(subtitle_path)
     try:
-        _file = open(subtitle_path, encoding=subtitle_encoding)
+        _file = open(subtitle_path, encoding=_subtitle_encoding)
         _file_content = _file.read()
         _srt_parsed_generator = srt.parse(_file_content)
         return list(_srt_parsed_generator)
     except Exception as e:
+        logging.warn(f'subtitle can not be procdessed.
+                     \nsubtitle_path: {subtitle_path}\nsubtitle predicted encoding: {_subtitle_encoding}')
         return []
 
 def sybc_and_load_subtitle_file(subtitle_path, movie):
     _movie_id = get_movie_id(movie)
-    _audio_path = f'./dataset/{_movie_id}/all.wav'
+    _audio_path = f'./dataset/{_movie_id}/all.mp3'
     _sync_path = '/'.join(subtitle_path.split('/')[:-1]) + '/sync.srt'
     subprocess.run(["ffs", _audio_path, '-i', subtitle_path, '-o', _sync_path])
     if os.path.exists(_sync_path):
         return load_subtitle_file(_sync_path), _sync_path
-    return [] , ''
+    else:
+        logging.warn('ffs can not sync the subtitle.\nsubtitle_path: {subtitle_path}')
+        return [] , ''
 
 def preprocess_subtitle_str(subtitle_str):
     _subtitle_str = subtitle_str.replace('\u200c','')
@@ -428,7 +428,7 @@ def preprocess_subtitle_str(subtitle_str):
 def zip_wavs(movie):
     _movie_id = get_movie_id(movie)
     with zipfile.ZipFile(f'./dataset/{_movie_id}/{_movie_id}.zip', 'w', zipfile.ZIP_DEFLATED) as _zipf:
-        _wavs = glob.glob(f'./dataset/{_movie_id}/*.wav')
+        _wavs = glob.glob(f'./dataset/{_movie_id}/*.mp3')
         for _wav in _wavs:
             _zipf.write(_wav, _wav.split('/')[-1], compress_type=zipfile.ZIP_DEFLATED)
             os.remove(_wav)
@@ -451,8 +451,8 @@ def save_results(movie, audio_array: np.array, sample_rate: float, movie_in_minu
     segment_path_list = []
     for index, row in df.iterrows():
         segment_array = audio_array[int(row['start']*sample_rate): int(row['end']*sample_rate)]
-        sf.write(f'./dataset/{movie_id}/{row["sub_index"]}.wav', segment_array, sample_rate, format='wav')
-        segment_path_list.append(f'{movie_id}/{row["sub_index"]}.wav')
+        sf.write(f'./dataset/{movie_id}/{row["sub_index"]}.mp3', segment_array, sample_rate, format='wav')
+        segment_path_list.append(f'{movie_id}/{row["sub_index"]}.mp3')
     df['path'] = segment_path_list
     df.to_csv(f'./dataset/{subtitle_lang}_{movie_id}.csv', index=False)
     zip_wavs(movie_id)
@@ -464,8 +464,11 @@ def check_movie(movie):
         return False
     if 'download_results' not in movie:
         return False
-    if len(movie['download_results']) != 1:
-        logging.info(f"for movie {movie['title']} len(movie['download_results']) != 1: --x-- " + str(movie))
+    if len(movie['download_results']) == 0:
+        logging.info(f"{movie['title']}:\nbecause movie has 0 download result it was dropped." + str(movie))
+        return False
+    if len(movie['download_results']) < 1:
+        logging.info(f"{movie['title']}:\nbeacause movie has more than 1 result it was dropped." + str(movie))
         return False
     if len(movie['download_results'][0]) == 0:
         logging.info(f"for movie {movie['title']} len(movie['download_results'][0]) == 0 --x-- " + str(movie))
@@ -488,34 +491,39 @@ def predict_encoding(file_path: Path, n_lines: int=20) -> str:
 
     return chardet.detect(_rawdata)['encoding']
 
-def process_subtitle_file(subtitle_list):
-    _start = None
-    _end = None
-    _content = ''
-    _processed_subtitles = []
-    _count = 0
-    _time_gap = datetime.timedelta(seconds=0.2)
-    _num_continous = 0
-    _is_segments_continous_list = is_segments_continous_batch(subtitle_list)
-    for _subt_idx, _subtitle in enumerate(tqdm(subtitle_list,desc='chatgpt')):
-        # time.sleep(0.17)
-        if _subt_idx == 0:
-            is_continous = True
+def divide_subtitle_list(subtitle_list, continous_list):
+    subtitle_division_list = []
+    division = []
+    for subtitle, is_continous in zip(subtitle_list, [True] + continous_list):
+        if division:
+            division.append(subtitle)
         else:
-            is_continous = _is_segments_continous_list[_subt_idx-1]
-        _content += ' ' + _subtitle.content
-        _content = preprocess_subtitle_str(_content)
-        _num_continous += 1
-        _end = _subtitle.end
-        if not _start:
-            _start = _subtitle.start
-        if (not is_continous) or (_num_continous > 3) or (_subt_idx == (len(subtitle_list) - 1)):
-            if _content and ((_end.total_seconds() - _start.total_seconds()) < 30):
-                _count+=1
-                processed_subtitle = Subtitle(_count, _start, _end, _content)
-                _processed_subtitles.append(processed_subtitle)
-            _num_continous = 0
-            _start = None
-            _end = None
-            _content = ''
+            if is_continous:
+                division.append(subtitle)
+            else:
+                subtitle_division_list.append(division)
+                division = []
+    if division:
+        subtitle_division_list.append(division)
+    return subtitle_division_list
+
+def process_subtitle_file(subtitle_list):
+    _processed_subtitles = []
+    _time_gap = datetime.timedelta(seconds=0.2)
+    continous_truth_list = algo_1(subtitle_list)
+    _subtitle_division_list = divide_subtitle_list(subtitle_list,continous_truth_list)
+    for _division_idx, _division in enumerate(_subtitle_division_list):
+        _start = _division[0].start
+        _end = _division[-1].end
+        division_content = ''
+        for _subtitle in _division:
+            _division_content += preprocess_subtitle_str(_subtitle.content)
+        _division_content = preprocess_subtitle_str(division_content)
+        _processed_subtitles.append(Subtitle(_division_idx + 1, _start, _end, _division_content))
     return _processed_subtitles
+
+# nlp = Pipeline(lang="multilingual", processors="langid")
+# docs = ["Hello world.", "Bonjour le monde!"]
+# docs = [Document([], text=text) for text in docs]
+# nlp(docs)
+# print("\n".join(f"{doc.text}\t{doc.lang}" for doc in docs)) 
