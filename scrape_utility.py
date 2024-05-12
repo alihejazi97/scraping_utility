@@ -178,12 +178,7 @@ def find_subtitle(title: str, year: int, languages: list[str]):
     _payload = {'api_key': ScrapeUtilityVariableStorage.SUBDL_API_KEY, 'film_name' : title, 'languages' : _languages_subdl}
     if type(year) == int and year >= 1800 and year <= 2024:
         _payload['year'] = year
-    try:
-        _response = requests.get(ScrapeUtilityVariableStorage.SUBDL_SEARCH_SUBTITLE_URL, params=_payload).json()
-    except Exception:
-        raise SubdlException(f'Subdl api can is not working.')
-    if _response.status_code != 200:
-        raise SubdlException(f'Subdl api returned status code {requests.status_codes}')
+    _response = requests.get(ScrapeUtilityVariableStorage.SUBDL_SEARCH_SUBTITLE_URL, params=_payload).json()
     if _response['status'] == False:
         raise SubdlException(f'Subdl result status was false')
     else:
