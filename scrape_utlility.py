@@ -400,8 +400,7 @@ def load_subtitle_file(subtitle_path):
         _srt_parsed_generator = srt.parse(_file_content)
         return list(_srt_parsed_generator)
     except Exception as e:
-        logging.warn(f'subtitle can not be procdessed.
-                     \nsubtitle_path: {subtitle_path}\nsubtitle predicted encoding: {_subtitle_encoding}')
+        logging.warn(f'subtitle can not be procdessed.\nsubtitle_path: {subtitle_path}\nsubtitle predicted encoding: {_subtitle_encoding}')
         return []
 
 def sybc_and_load_subtitle_file(subtitle_path, movie):
