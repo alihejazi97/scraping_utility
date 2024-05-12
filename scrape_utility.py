@@ -32,7 +32,53 @@ class ScrapeUtilityVariableStorage:
     SUBDL_SUBTITLE_DOWNLOAD_URL = 'https://dl.subdl.com'
     MIN_LENGTH_TO_RETURN : float = 0.2
     SUBDL_API_KEY : str = None
+    SUBDL_LANG_CODES : dict [str, list[str]] = {
+        'fa' : ['FA'],          # persian
+        'en' : ['EN'],          # english
+        'de' : ['DE', 'EN_DE'], # german
+        'fr' : ['FR'],          # france
+        'es' : ['ES'],          # spanish
+        'it' : ['IT'],          # italian
+        'ar' : ['AR'],          # arabic
+        'pt' : ['PT'],          # portuguese
+        'ru' : ['RU'],          # russian
+        'tr' : ['TR'],          # turkish
+        'uk' : ['UK'],          # ukrainian
+        'pl' : ['PL'],          # polish
+        'zh' : ['ZH_BG', 'ZH'], # chinese
+        'hi' : ['HI'],          # hindi
+        'bn' : ['BN'],          # bengali
+        'ja' : ['JA'],          # japanese
+        'vi' : ['VI'],          # vietnamese
+        'ko' : ['KO'],          # korean
+        'fi' : ['FI'],          # finnish
+        'ur' : ['UR']           # Urdu
+    }
 
+    SUBDL_LANGUAGE_MAP : dict[str, str] = {
+    "farsi_persian" : 'fa',     # persian
+    "english" : 'en',           # english
+    "english_german" : 'de',    # german
+    "german" : 'de',            # german
+    "french" : 'fr',            # france
+    "spanish" : 'es',           # spanish
+    "italian" : 'it',           # italian
+    "arabic" : 'ar',            # arabic
+    "portuguese" : 'pt',        # portuguese
+    "russian" : 'ru',           # russian
+    "turkish" : 'tr',           # turkish
+    "ukranian" : 'uk',          # ukrainian
+    "polish": 'pl',             # polish
+    "big 5 code": 'zh',         # chinese
+    "chinese bg code" : 'zh',   # chinese
+    "hindi" : "hi",             # hindi
+    "bengali" : "bn",           # bengali
+    "japanese" : "ja",          # japanese
+    "vietnamese" : "vi",        # vietnamese
+    "korean" : "ko",            # korean
+    "finnish" : "fi",           # finnish
+    "urdu" : "ur"               # Urdu
+    }
 
 def save_json(path: Union[str, os.PathLike], obj):
     with open(path,  'w',  encoding='utf-8') as f:
