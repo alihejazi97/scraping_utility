@@ -197,7 +197,7 @@ def extract_title_year_from_30nama_title(movie):
         raise ScarapingException('year can not be converted to integer.')
     return _title_subdl, _year_subdl
 
-def download_subtitle_subdl(movie, languages: list[str], processed_langs, max_subtitle_movie_try: int):
+def download_subtitle_subdl(movie, languages: list[str], processed_langs: list[str], max_subtitle_movie_try: int):
     _movie_id = movie['id']
     _title_subdl, _year_subdl = extract_title_year_from_30nama_title(movie)
     _posible_movies = find_movies_subdl(_title_subdl, _year_subdl, languages)
