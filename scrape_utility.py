@@ -29,10 +29,10 @@ import soundfile as sf
 import torch
 from torch.nn import CosineSimilarity
 
-# from sonar.models.sonar_speech.loader import load_sonar_speech_model
-# from sonar.models.sonar_text import load_sonar_text_encoder_model , load_sonar_tokenizer
-# from sonar.inference_pipelines.text import TextToEmbeddingModelPipeline
-# from sonar.inference_pipelines.speech import SpeechToEmbeddingModelPipeline
+from sonar.models.sonar_speech.loader import load_sonar_speech_model
+from sonar.models.sonar_text import load_sonar_text_encoder_model , load_sonar_tokenizer
+from sonar.inference_pipelines.text import TextToEmbeddingModelPipeline
+from sonar.inference_pipelines.speech import SpeechToEmbeddingModelPipeline
 
 opener = urllib.request.build_opener()
 opener.addheaders = [('User-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWeb'),
