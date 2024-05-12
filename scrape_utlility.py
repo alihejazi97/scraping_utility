@@ -299,9 +299,7 @@ def download_subtitle_subdl(movie, languages: list[str], processed_langs, max_su
             if _subtitle_lang in processed_langs:
                 continue
             if (_subtitle_lang not in languages):
-                logging.warn(f"this language ({_subtitle['lang'].lower()}) is not wanted but is in the subdl api results.
-                             \npossible movie: {_posible_movie['name']}\n 
-                             possible movie year{_posible_movie['year']}\n returned subtitle object : {_subtitle}\n")
+                logging.warn(f"this language ({_subtitle['lang'].lower()}) is not wanted but is in the subdl api results.\npossible movie: {_posible_movie['name']}\nspossible movie year{_posible_movie['year']}\n returned subtitle object : {_subtitle}\n")
                 continue
             create_directory(f'./temp/{_movie_id}/')
             if not _subtitle['url']:
