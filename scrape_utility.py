@@ -231,9 +231,9 @@ def download_subtitle_subdl(movie, languages: list[str], processed_langs: list[s
                 for _subtitle_path in _srt_list:
                     yield _subtitle_path, _subtitle_lang
 
-def download_video_file(download_bar, download_bar_index, movie, sampling_rate : float):
+def download_video_file(download_bar, download_bar_index, movie, sampling_rate : float, audio_path):
     movie_id = movie['id']
-    if not os.path.isfile(f'./dataset/{movie_id}/all.wav'):
+    if not os.path.isfile(audio_path + 'all.wav'):
         _download_link = download_bar['download_link']
         _movie_extention = _download_link.split('/')[-1].split('.')[-1]
         _video_file_path = f'./temp/{movie_id}/{download_bar_index}.{_movie_extention}'
