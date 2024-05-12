@@ -282,7 +282,7 @@ def zip_wavs(movie):
             os.remove(_wav)
 
 def get_movie_str(movie):
-    return f'movie title: {movie["title"]} ### movie id: {movie["idgr"]}'
+    return f'movie title: {movie["title"]} ### movie id: {movie["id"]}'
 
 def check_movie(movie):
     if movie['is_series']:
