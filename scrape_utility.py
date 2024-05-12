@@ -180,18 +180,18 @@ def find_subtitle(title: str, year: int, languages: list[str]):
         _payload['year'] = year
     _response = requests.get(ScrapeUtilityVariableStorage.SUBDL_SEARCH_SUBTITLE_URL, params=_payload).json()
     if _response['status'] == False:
-        raise SubdlException(f'Subdl result status was false')
+        logging.warn(f'Subdl result status was false')
     else:
         return _response['subtitles']
 
 def extract_title_year_from_30nama_title(movie):
     if len(movie['title']) < 6:
-        raise ScarapingException('movie title is too short. we can not extract title and year from it.')
+        logging.warn('movie title is too short. we can not extract title and year from it.')
     _title_subdl = movie['title'][:-5]
     try:
         _year_subdl = int(movie['title'][-4:])
     except ValueError:
-        raise ScarapingException('year can not be converted to integer.')
+        logging.warn('year can not be converted to integer.')
     return _title_subdl, _year_subdl
 
 def download_subtitle_subdl(movie, languages: list[str], processed_langs: list[str], max_subtitle_movie_try: int):
@@ -213,7 +213,7 @@ def download_subtitle_subdl(movie, languages: list[str], processed_langs: list[s
                 continue
             create_directory(f'./temp/{_movie_id}/')
             if not _subtitle['url']:
-                raise Exception(f"empty subtitle url {_subtitle['url']} is not wanted but is in the subdl api results.")
+                logging.warn(f"empty subtitle url {_subtitle['url']} is not wanted but is in the subdl api results.")
             _zip_path = f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang}.zip'
             if os.path.isfile(_zip_path):
                 continue
@@ -221,7 +221,7 @@ def download_subtitle_subdl(movie, languages: list[str], processed_langs: list[s
             try:
                 urllib.request.urlretrieve(_zipped_url,_zip_path)
             except Exception:
-                raise SubdlException(f'can not retrive following subd subtitle :{_zipped_url}')
+                logging.warn(f'can not retrive following subd subtitle :{_zipped_url}')
             with zipfile.ZipFile(_zip_path, 'r') as _zip_ref:
                 _zip_ref.extractall(f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang}/')
                 _srt_list = glob.glob(f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang}/?*.srt')
@@ -237,7 +237,7 @@ def download_video_file(download_bar, download_bar_index, movie, sampling_rate :
         try:
             urllib.request.urlretrieve(_download_link, _video_file_path, ShowProgressUrllib())
         except Exception:
-            CNamaDownloadException('Today maximum requests have reached its limits.')
+            raise CNamaDownloadException('Today maximum requests have reached its limits.')
         ffmpeg.input(_video_file_path).output(f'./dataset/{movie_id}/all.mp3', ac=1, ar=sampling_rate).run()
         return True
 
