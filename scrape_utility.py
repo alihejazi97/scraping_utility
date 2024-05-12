@@ -302,9 +302,9 @@ def check_movie(movie):
     if len(movie['download_results'][0]) == 0:
         logging.info(f"{get_movie_str(movie)}\nbeacause movie has 0 download bars it was dropped.")
         return False
-    if len(movie['subtitle_results']) == 0:
-        logging.info(f"{get_movie_str(movie)}\nbeacause movie has 0 subtitle it was dropped.")
-        return False
+    # if len(movie['subtitle_results']) == 0:
+    #     logging.info(f"{get_movie_str(movie)}\nbeacause movie has 0 subtitle it was dropped.")
+    #     return False
     return True
 
 def predict_encoding(file_path: Path, n_lines: int=20) -> str:
