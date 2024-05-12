@@ -46,7 +46,7 @@ class ScrapeUtilityVariableStorage:
     SIMILARITY_MEASURE = CosineSimilarity(dim=1, eps=1e-6)
     PARANTHESIS_REGEX_STR_LIST : list[str] = [r'(\[[\S\s]*\])',r'(\][\S\s]*\[)',r'(\)[\S\s]*\()',r'(\([\S\s]*\))']
     PARANTHESIS_REGEX : re.Pattern = re.compile(r'|'.join(PARANTHESIS_REGEX_STR_LIST))
-    WHITESPACE_REGEX : re.Pattern = re.compile(r'^\s+|\s+$')
+    LEADING_TRAILING_WHITESPACE_REGEX : re.Pattern = re.compile(r'^\s+|\s+$')
     CONTINOUS_SYMBOL_REGEX = re.compile(r'(^(\.\.\.))|(((\.\.\.)|:)$)')
     SUBDL_SEARCH_MOVIE_URL = 'https://api.subdl.com/auto'
     SUBDL_SEARCH_SUBTITLE_URL = 'https://api.subdl.com/api/v1/subtitles'
@@ -55,6 +55,8 @@ class ScrapeUtilityVariableStorage:
     OPENAI_API_KEY : str = None
     SUBDL_API_KEY : str = None
     SPEECH_EMBEDDING_COMPUTATION_BATCH_SIZE: int = 4
+    TEXT_EMBEDDING_COMPUTATION_BATCH_SIZE: int = 8
+    OPENAI_CLIENT = None
     SONAR_TEXT_LANG_MAP : dict [str, str] = {
         'fa' : 'sonar_speech_encoder_base_pes', # persian
         'en' : 'sonar_speech_encoder_base_eng', # english
@@ -147,7 +149,8 @@ class ScrapeUtilityVariableStorage:
     "korean" : "ko",            # korean
     "finnish" : "fi",           # finnish
     "urdu" : "ur"               # Urdu
-}
+    }
+    
 
 
 def save_json(path: Union[str, os.PathLike], obj):
@@ -204,12 +207,12 @@ def compute_similarity(audio_array: np.array, sample_rate: int, subtitle: Subtit
     _text_embedding = text_embedding_model.predict([subtitle.content], source_lang='pes_Arab')
     return ScrapeUtilityVariableStorage.SIMILARITY_MEASURE(_speech_embedding, _text_embedding)
 
-def compute_batch_speech_embedding(audio_array: np.array, sample_rate: float, subtitle_list: list[Subtitle], speech_embedding_model:SpeechToEmbeddingModelPipeline, speech_embedding_batch_size: int):
+def compute_batch_speech_embedding(audio_array: np.array, sample_rate: float, subtitle_list: list[Subtitle], speech2embedding_model:SpeechToEmbeddingModelPipeline):
     _audio_array_list = []
     for _subtitle in subtitle_list:
         _audio_array = extract_segment_from_array(audio_array, sample_rate, _subtitle)
         _audio_array_list.append(torch.Tensor(_audio_array).unsqueeze(dim=0).cuda())
-    _speech_embeddings = speech_embedding_model.predict(_audio_array_list, batch_size=speech_embedding_batch_size)
+    _speech_embeddings = speech2embedding_model.predict(_audio_array_list, batch_size=ScrapeUtilityVariableStorage.SPEECH_EMBEDDING_COMPUTATION_BATCH_SIZE)
     return _speech_embeddings
 
 def get_min_download_bar(movie, encoder : str = None):
@@ -247,27 +250,42 @@ class SubdlException(Exception):
     def __init__(self, message) -> None:
         super(Exception, self).__init__(message)
  
+class ScarapingException(Exception):
+    def __init__(self, message) -> None:
+        super(Exception, self).__init__(message)
+
+class CNamaDownloadException(Exception):
+    def __init__(self, message) -> None:
+        super(Exception, self).__init__(message)
 
 def find_subtitle(title: str, year: int, languages: list[str]):
     _languages_subdl = ','.join(languages)
     _payload = {'api_key': ScrapeUtilityVariableStorage.SUBDL_API_KEY, 'film_name' : title, 'languages' : _languages_subdl}
     if type(year) == int and year >= 1800 and year <= 2024:
         _payload['year'] = year
-    _response = requests.get(ScrapeUtilityVariableStorage.SUBDL_SEARCH_SUBTITLE_URL, params=_payload).json()
+    try:
+        _response = requests.get(ScrapeUtilityVariableStorage.SUBDL_SEARCH_SUBTITLE_URL, params=_payload).json()
+    except Exception:
+        raise SubdlException(f'Subdl api can is not working.')
     if _response.status_code != 200:
-        raise 
+        raise SubdlException(f'Subdl api returned status code {requests.status_codes}')
     if _response['status'] == False:
-        raise SubdlException()
+        raise SubdlException(f'Subdl result status was false')
     else:
         return _response['subtitles']
 
 def extract_title_year_from_30nama_title(movie):
+    if len(movie['title']) < 6:
+        raise ScarapingException('movie title is too short. we can not extract title and year from it.')
     _title_subdl = movie['title'][:-5]
-    _year_subdl = int(movie['title'][-4:])
+    try:
+        _year_subdl = int(movie['title'][-4:])
+    except ValueError:
+        raise ScarapingException('year can not be converted to integer.')
     return _title_subdl, _year_subdl
 
 def download_subtitle_subdl(movie, languages: list[str], processed_langs, max_subtitle_movie_try: int):
-    _movie_id = get_movie_id(movie)
+    _movie_id = movie['id']
     _title_subdl, _year_subdl = extract_title_year_from_30nama_title(movie)
     _posible_movies = find_movies_subdl(_title_subdl, _year_subdl, languages)
     for idx_posible_movie_id, _posible_movie in enumerate(_posible_movies[:max_subtitle_movie_try]):
@@ -292,78 +310,62 @@ def download_subtitle_subdl(movie, languages: list[str], processed_langs, max_su
             if os.path.isfile(_zip_path):
                 continue
             _zipped_url = ScrapeUtilityVariableStorage.SUBDL_SUBTITLE_DOWNLOAD_URL + '/' + _subtitle['url']
-            # catch exception
-            urllib.request.urlretrieve(_zipped_url,_zip_path)
+            try:
+                urllib.request.urlretrieve(_zipped_url,_zip_path)
+            except Exception:
+                raise SubdlException(f'can not retrive following subd subtitle :{_zipped_url}')
             with zipfile.ZipFile(_zip_path, 'r') as _zip_ref:
                 _zip_ref.extractall(f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang}/')
                 _srt_list = glob.glob(f'./temp/{_movie_id}/sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang}/?*.srt')
-                if len(_srt_list) > 0:
-                    yield _srt_list[0], _subtitle_lang
-
-def get_movie_id(movie):
-    return movie["page_num"] * 100 + movie["index"]
-
+                for _subtitle_path in _srt_list:
+                    yield _subtitle_path, _subtitle_lang
 
 def download_video_file(download_bar, download_bar_index, movie, sampling_rate : float):
-    movie_id = get_movie_id(movie)
+    movie_id = movie['id']
     if not os.path.isfile(f'./dataset/{movie_id}/all.wav'):
         _download_link = download_bar['download_link']
         _movie_extention = _download_link.split('/')[-1].split('.')[-1]
         _video_file_path = f'./temp/{movie_id}/{download_bar_index}.{_movie_extention}'
-        urllib.request.urlretrieve(_download_link, _video_file_path, ShowProgressUrllib())
+        try:
+            urllib.request.urlretrieve(_download_link, _video_file_path, ShowProgressUrllib())
+        except Exception:
+            CNamaDownloadException('Today maximum requests have reached its limits.')
         ffmpeg.input(_video_file_path).output(f'./dataset/{movie_id}/all.mp3', ac=1, ar=sampling_rate).run()
         return True
 
-# def load_speech_model_in_gpu():
-#     speech_encoder_model.cuda()
-#     s2vec_model.cuda()
-#     text_encoder_model.cpu()
-#     t2vec_model.device = device_cpu
-#     t2vec_model.cpu()
-
-# def load_text_model_in_gpu():
-#     speech_encoder_model.cpu()
-#     s2vec_model.cpu()
-#     text_encoder_model.cuda()
-#     t2vec_model.device = device_gpu
-#     t2vec_model.cuda()
-
-def get_parallel_data(audio_array: np.array, sample_rate: int, subtitle_list: list[Subtitle], subtitle_path: Union[str, os.PathLike], subtitle_lang: str, middle_percentage:float=None):
-    # load_speech_model_in_gpu()
+def get_parallel_data(audio_array: np.array, sample_rate: int, subtitle_list: list[Subtitle], subtitle_path: Union[str, os.PathLike], subtitle_lang: str, speech2embedding_model:SpeechToEmbeddingModelPipeline, text2embedding_model:TextToEmbeddingModelPipeline, middle_percentage:float=None):
 
     if middle_percentage:
-        test_begin_index = int(len(subtitle_list)*(0.5 - (middle_percentage/2)))
-        test_subtitle_list = subtitle_list[test_begin_index:test_begin_index + 50]
-        processed_subtitles = process_subtitle_file(audio_array, sample_rate, test_subtitle_list, subtitle_path, True)
+        _test_begin_index = int(len(subtitle_list)*(0.5 - (middle_percentage/2)))
+        _test_subtitle_list = subtitle_list[_test_begin_index:_test_begin_index + 50]
+        _processed_subtitles = process_subtitle_file(audio_array, sample_rate, _test_subtitle_list, subtitle_path, True)
     else:
-        processed_subtitles = process_subtitle_file(audio_array, sample_rate, subtitle_list, subtitle_path, False)
+        _processed_subtitles = process_subtitle_file(audio_array, sample_rate, subtitle_list, subtitle_path, False)
 
 
     if middle_percentage:
-        speech_embedding_batch = compute_batch_speech_embedding(audio_array, sample_rate, processed_subtitles,
-                                                                s2vec_model, SPEECH_EMBEDDING_COMPUTATION_BATCH_SIZE)
-        processed_subtitle_content_list = []
-        for subtitle in processed_subtitles:
-            processed_subtitle_content_list.append(subtitle.content)
+        _speech_embedding_batch = compute_batch_speech_embedding(audio_array, sample_rate, _processed_subtitles,
+                                                                speech2embedding_model, ScrapeUtilityVariableStorage.SPEECH_EMBEDDING_COMPUTATION_BATCH_SIZE)
+        _processed_subtitle_content_list = []
+        for _subtitle in _processed_subtitles:
+            _processed_subtitle_content_list.append(_subtitle.content)
 
-        if subtitle_lang == 'fa':
-            text_embedding = t2vec_model.predict(processed_subtitle_content_list, batch_size=TEXT_EMBEDDING_BATCH_SIZE,
-                                        target_device=GPU_DEVICE, source_lang='pes_Arab')
-        if subtitle_lang == 'en':
-            text_embedding = t2vec_model.predict(processed_subtitle_content_list, batch_size=TEXT_EMBEDDING_BATCH_SIZE,
-                                        target_device=GPU_DEVICE, source_lang='eng_Latn')
+        _source_language = ScrapeUtilityVariableStorage.SONAR_TEXT_LANG_MAP[subtitle_lang]
+        _text_embedding = text2embedding_model.predict(_processed_subtitle_content_list, batch_size=ScrapeUtilityVariableStorage.TEXT_EMBEDDING_COMPUTATION_BATCH_SIZE,
+                                        target_device=ScrapeUtilityVariableStorage.GPU_DEVICE, source_lang=_source_language)
 
-        similarities = similarity_meausre(speech_embedding_batch, text_embedding)
-        return processed_subtitles, similarities
-    return processed_subtitles, torch.full((len(processed_subtitles),),0.1)
+        _similarities = ScrapeUtilityVariableStorage.SIMILARITY_MEASURE(_speech_embedding_batch, _text_embedding)
+        return _processed_subtitles, _similarities
+    return _processed_subtitles, torch.full((len(_processed_subtitles),),0.1)
 
-def algo_1(segments_list):
+def legacy_algo(segments_list):
+    SUBTITLE_MAX_GAP = 2 # in seconds
     _is_contimous_list = []
     _index_to_be_computed = []
     _final_output_dict = {}
     _prompt_list = []
     for _idx, (_segment1, _segment2) in enumerate(zip(segments_list[:-1],segments_list[1:])):
-        if (_segment2.start.total_seconds() > _segment1.end.total_seconds() + 2):
+        if (_segment2.start.total_seconds() > _segment1.end.total_seconds() + SUBTITLE_MAX_GAP):
             _final_output_dict[_idx] = False
         elif preprocess_subtitle_str(_segment1.content) and preprocess_subtitle_str(_segment2.content):
             instruction = 'Respond with either yes or no if a meaningfull bigger sentence is split between these two subtitle blocks.'
@@ -377,13 +379,13 @@ def algo_1(segments_list):
             _final_output_dict[_idx] = True
     _choices = []
     for i in range(0,len(_prompt_list),20):
-        _choices.extend(client.completions.create(model="gpt-3.5-turbo-instruct",
+        _choices.extend(ScrapeUtilityVariableStorage.OPENAI_CLIENT.completions.create(model="gpt-3.5-turbo-instruct",
                                               prompt=_prompt_list[i:i+20]
                                               , max_tokens=3, temperature=0.1).choices)
     for id,choice in enumerate(_choices):
         _index_prompt = _index_to_be_computed[id]
         _response = choice.text.replace('\n', '')
-        _response = ScrapeUtilityVariableStorage.WHITESPACE_REGEX.sub('', _response)
+        _response = ScrapeUtilityVariableStorage.LEADING_TRAILING_WHITESPACE_REGEX.sub('', _response)
         if _response.lower() == 'yes':
             _final_output_dict[_index_prompt] = True
         else:
@@ -405,28 +407,27 @@ def load_subtitle_file(subtitle_path):
         return []
 
 def sybc_and_load_subtitle_file(subtitle_path, movie):
-    _movie_id = get_movie_id(movie)
+    _movie_id = movie['id']
     _audio_path = f'./dataset/{_movie_id}/all.mp3'
     _sync_path = '/'.join(subtitle_path.split('/')[:-1]) + '/sync.srt'
     subprocess.run(["ffs", _audio_path, '-i', subtitle_path, '-o', _sync_path])
     if os.path.exists(_sync_path):
         return load_subtitle_file(_sync_path), _sync_path
     else:
-        logging.warn('ffs can not sync the subtitle.\nsubtitle_path: {subtitle_path}')
+        logging.warn(f'ffs can not sync the subtitle.\nsubtitle_path: {subtitle_path}')
         return [] , ''
 
 def preprocess_subtitle_str(subtitle_str):
-    _subtitle_str = subtitle_str.replace('\u200c','')
+    _subtitle_str = subtitle_str.replace('\u200c',' ')
     _subtitle_str = _subtitle_str.replace('\n',' ')
-    _subtitle_str = _subtitle_str.replace('...','')
-    _subtitle_str = ScrapeUtilityVariableStorage.WHITESPACE_REGEX.sub('', _subtitle_str)
+    _subtitle_str = ScrapeUtilityVariableStorage.LEADING_TRAILING_WHITESPACE_REGEX.sub('', _subtitle_str)
     _subtitle_str = ScrapeUtilityVariableStorage.PARANTHESIS_REGEX.sub('', _subtitle_str)
     _subtitle_str = ScrapeUtilityVariableStorage.CONTINOUS_SYMBOL_REGEX.sub('', _subtitle_str)
-    _subtitle_str = ScrapeUtilityVariableStorage.WHITESPACE_REGEX.sub('', _subtitle_str)
+    _subtitle_str = ScrapeUtilityVariableStorage.LEADING_TRAILING_WHITESPACE_REGEX.sub('', _subtitle_str)
     return _subtitle_str
 
 def zip_wavs(movie):
-    _movie_id = get_movie_id(movie)
+    _movie_id = movie['id']
     with zipfile.ZipFile(f'./dataset/{_movie_id}/{_movie_id}.zip', 'w', zipfile.ZIP_DEFLATED) as _zipf:
         _wavs = glob.glob(f'./dataset/{_movie_id}/*.mp3')
         for _wav in _wavs:
@@ -435,7 +436,7 @@ def zip_wavs(movie):
 
 def save_results(movie, audio_array: np.array, sample_rate: float, movie_in_minutes, movie_in_seconds, final_subtitles: list[Subtitle], subtitle_lang: str, similarities: np.array):
     pd_dict = {}
-    movie_id = get_movie_id(movie)
+    movie_id = movie['id']
     pd_dict['start'] = [subtitle.start.total_seconds() for subtitle in final_subtitles]
     pd_dict['end'] = [subtitle.end.total_seconds() for subtitle in final_subtitles]
     pd_dict['content'] = [subtitle.content for subtitle in final_subtitles]
@@ -457,6 +458,10 @@ def save_results(movie, audio_array: np.array, sample_rate: float, movie_in_minu
     df.to_csv(f'./dataset/{subtitle_lang}_{movie_id}.csv', index=False)
     zip_wavs(movie_id)
 
+
+def get_movie_str(movie):
+    return f'movie title: {movie["title"]} ### movie id: {movie["idgr"]}'
+
 def check_movie(movie):
     if movie['is_series']:
         return False
@@ -465,16 +470,16 @@ def check_movie(movie):
     if 'download_results' not in movie:
         return False
     if len(movie['download_results']) == 0:
-        logging.info(f"{movie['title']}:\nbecause movie has 0 download result it was dropped." + str(movie))
+        logging.info(f"{get_movie_str(movie)}\nbecause movie has 0 download_results it was dropped.")
         return False
     if len(movie['download_results']) < 1:
-        logging.info(f"{movie['title']}:\nbeacause movie has more than 1 result it was dropped." + str(movie))
+        logging.info(f"{get_movie_str(movie)}\nbeacause movie has more than 1 download_results it was dropped.")
         return False
     if len(movie['download_results'][0]) == 0:
-        logging.info(f"for movie {movie['title']} len(movie['download_results'][0]) == 0 --x-- " + str(movie))
+        logging.info(f"{get_movie_str(movie)}\nbeacause movie has 0 download bars it was dropped.")
         return False
     if len(movie['subtitle_results']) == 0:
-        logging.info(f"for movie {movie['title']} len(movie['subtitle_results']) == 0 --x-- " + str(movie))
+        logging.info(f"{get_movie_str(movie)}\nbeacause movie has 0 subtitle it was dropped.")
         return False
     return True
 
@@ -492,33 +497,29 @@ def predict_encoding(file_path: Path, n_lines: int=20) -> str:
     return chardet.detect(_rawdata)['encoding']
 
 def divide_subtitle_list(subtitle_list, continous_list):
-    subtitle_division_list = []
-    division = []
-    for subtitle, is_continous in zip(subtitle_list, [True] + continous_list):
-        if division:
-            division.append(subtitle)
-        else:
-            if is_continous:
-                division.append(subtitle)
-            else:
-                subtitle_division_list.append(division)
-                division = []
-    if division:
-        subtitle_division_list.append(division)
-    return subtitle_division_list
+    _subtitle_division_list = []
+    _division = []
+    assert len(continous_list) + 1 == len(subtitle_list)
+    for _subtitle, _is_continous in zip(subtitle_list, [True] + continous_list):
+        if _division and (not _is_continous):
+            _subtitle_division_list.append(_division)
+            _division = []
+        _division.append(_subtitle)    
+    if _division:
+        _subtitle_division_list.append(_division)
+    return _subtitle_division_list
 
 def process_subtitle_file(subtitle_list):
     _processed_subtitles = []
-    _time_gap = datetime.timedelta(seconds=0.2)
-    continous_truth_list = algo_1(subtitle_list)
+    continous_truth_list = legacy_algo(subtitle_list)
     _subtitle_division_list = divide_subtitle_list(subtitle_list,continous_truth_list)
     for _division_idx, _division in enumerate(_subtitle_division_list):
         _start = _division[0].start
         _end = _division[-1].end
-        division_content = ''
+        _division_content = ''
         for _subtitle in _division:
             _division_content += preprocess_subtitle_str(_subtitle.content)
-        _division_content = preprocess_subtitle_str(division_content)
+        _division_content = preprocess_subtitle_str(_division_content)
         _processed_subtitles.append(Subtitle(_division_idx + 1, _start, _end, _division_content))
     return _processed_subtitles
 
