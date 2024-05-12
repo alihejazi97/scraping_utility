@@ -9,5 +9,6 @@ setup(
     description="project_description",
     url="https://github.com/author_name/project_urlname/",
     py_modules=['scrape_utitliy'],
+    requires=[],
     author="ali_hejazi",
 )
