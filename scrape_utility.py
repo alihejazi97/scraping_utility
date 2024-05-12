@@ -135,6 +135,8 @@ def get_min_download_bar(movie, encoder : str = None):
     for _minsize_idx, _download_bar in enumerate(movie['download_results'][0]['download_bars']):
         if _download_bar['size'] < _minsize:
             if encoder:
+                if 'encoder' not in _download_bar:
+                    continue
                 if not (_download_bar['encoder'].lower() == encoder.lower()):
                     continue
             _minsize = _download_bar['size']
