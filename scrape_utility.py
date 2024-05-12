@@ -204,7 +204,7 @@ def download_subtitle_subdl(movie, languages: list[str], processed_langs: list[s
     _title_subdl, _year_subdl = extract_title_year_from_30nama_title(movie)
     _posible_movies = find_movies_subdl(_title_subdl, _year_subdl, languages)
     for idx_posible_movie_id, _posible_movie in enumerate(_posible_movies[:max_subtitle_movie_try]):
-        _subdl_subtitles = find_subtitle(_posible_movie['name'] ,_posible_movie['year'])
+        _subdl_subtitles = find_subtitle(_posible_movie['name'] ,_posible_movie['year'], languages)
         for _subtitle_id, _subtitle in enumerate(_subdl_subtitles):
             if _subtitle['lang'].lower() in ScrapeUtilityVariableStorage.SUBDL_LANGUAGE_MAP:
                 _subtitle_lang = ScrapeUtilityVariableStorage.SUBDL_LANGUAGE_MAP[_subtitle['lang'].lower()]
