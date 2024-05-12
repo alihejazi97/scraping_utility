@@ -181,6 +181,7 @@ def find_subtitle(title: str, year: int, languages: list[str]):
     _response = requests.get(ScrapeUtilityVariableStorage.SUBDL_SEARCH_SUBTITLE_URL, params=_payload).json()
     if _response['status'] == False:
         logging.warn(f'Subdl result status was false')
+        return []
     else:
         return _response['subtitles']
 
