@@ -27,8 +27,8 @@ class Movie:
         @dataclass
         class DownloadBar:
             size: float
-            resolution: str
             download_link: str
+            resolution: str = ''
             encoder: str = ''
             @classmethod
             def from_dict(cls, download_bar: dict):
@@ -52,9 +52,9 @@ class Movie:
         @classmethod
         def from_dict(cls, subtitle_result: dict):
             if subtitle_result['lang'] == "فارسی":
-                _lang = iso639.Language.from_part2b('fa')
+                _lang = iso639.Language.from_part1('fa')
             if subtitle_result['lang'] == "انگلیسی":
-                _lang = iso639.Language.from_part2b('en')
+                _lang = iso639.Language.from_part1('en')
             else:
                 _lang = None
             return cls(subtitle_link=subtitle_result['subtitle_link'], lang=_lang, quality=subtitle_result['quality'])
@@ -106,16 +106,31 @@ class Movie:
         except ValueError:
             raise CNamaDataException('year can not be converted to integer.')
         return _title_subdl, _year_subdl
+    
+    def get_min_download_bar(self, encoder : str = None):
+        _minsize : int = 999_999_999
+        _minsize_item = None
+        _minsize_index : int = 0
+        for _minsize_idx, _download_bar in enumerate(self.download_results[0].download_bars):
+            if _download_bar.size < _minsize:
+                if encoder:
+                    if _download_bar.encoder.lower() != encoder.lower():
+                        continue
+                _minsize = _download_bar.size
+                _minsize_item = _download_bar
+                _minsize_index = _minsize_idx
+        return _minsize_item, _minsize_index
 
-@default_setting(arguments_key_idx_sname=('sample_rate',4,'SAMPLE_RATE',))
-def convert_video_to_audio(video_file_path: Union[str, os.PathLike], audio_path: Union[str, os.PathLike], mono: bool,
-                           sample_rate: int):
-    output_options = {}
-    if mono:
-        output_options['ac'] = 1
-    if sample_rate:
-        output_options['ar'] = sample_rate
-    ffmpeg.input(video_file_path).output(audio_path, **output_options).run()
+    def get_best_download_bar(self):
+        _minsize_item, _minsize_index = self.get_min_download_bar()
+        _minsize_item_encoder_30nama, _minsize_index_encoder_30nama = self.get_min_download_bar('30nama')
+        if _minsize_item_encoder_30nama:
+            return _minsize_index_encoder_30nama, _minsize_item_encoder_30nama
+        return _minsize_index, _minsize_item
+
+
+
+
 
 @default_setting(arguments_key_idx_sname=('sample_rate',4,'SAMPLE_RATE',))
 def convert_video_to_audio(video_file_path: Union[str, os.PathLike], audio_path: Union[str, os.PathLike], mono: bool,
@@ -308,7 +323,7 @@ def detect_lang(subtitles: SSAFile, lid_model: stanza.pipeline.core.Pipeline=Non
         concat_all_content += ' ' + sub.plaintext 
     return iso639.Language.from_part1(lid_model(concat_all_content).lang)
 
-def process_subtitle_file(subtitle_list: Iterable[SSAEvent], continous_fn=legacy_algo, preprocess_fn=preprocess_subtitle_str) -> Iterable[SimpleSubtitle]:
+def process_subtitle_file(subtitle_list: Iterable[SSAEvent], continous_fn=legacy_algo, preprocess_fn=preprocess_subtitle_str) -> Iterable[SSAEvent]:
     _processed_subtitles = []
     _continous_truth_list = continous_fn(subtitle_list)
     _subtitle_division_list = divide_subtitle_list(subtitle_list,_continous_truth_list)
