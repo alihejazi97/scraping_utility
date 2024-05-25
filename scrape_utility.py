@@ -18,7 +18,7 @@ class SubtitleData:
     movie_id: int = -1
     subdl_movie_name: str = ''
     language: Language = Settings.UNKNOWN_LANGUAGE
-    
+
 def find_subtitle(title: str, year: int, languages: List[Language], subdl_api_key: str):
     _languages_subdl = ','.join(list(map(Settings.SUBDL_LANG_CODES, languages)))
     _payload = {'api_key': subdl_api_key,
@@ -59,7 +59,7 @@ def find_movies_subdl(title: str):
 
 def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_langs: list[Language]=[],
                             subtitle_zip_directory: Union[str, os.PathLike] = './', subtitle_directory: Union[str, os.PathLike] = './',
-                            max_posible_movie: int = 1) -> SubtitleData:
+                            max_posible_movie: int = 1):
     _title_subdl, _year_subdl = movie.extract_title_year_from_30nama_title()
     _posible_movies = find_movies_subdl(_title_subdl, _year_subdl)[:max_posible_movie]
     
