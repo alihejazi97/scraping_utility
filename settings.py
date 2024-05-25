@@ -19,7 +19,7 @@ def default_setting(arguments_key_idx_sname):
                 if len(args) <= argument_index:
                     if argument_key not in kwargs:
                         kwargs[argument_key] = Settings.__getattribute__(Settings, setting_name)
-            func(*args, **kwargs)
+            return func(*args, **kwargs)
         return wrapper
     return decorator
 
