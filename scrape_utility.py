@@ -36,7 +36,7 @@ def find_subtitle(title: str, year: int, languages: List[Language], subdl_api_ke
             return []
         else:
             return _response_json['subtitles']
-    except requests.RequestsJSONDecodeError:
+    except requests.exceptions.RequestsJSONDecodeError:
         raise SubdlException(f'can not convert Subdl "find subtitle api" results to json {_response.status_code}')
 
 def sort_posible_movies(response_json, title: str, year: int):
@@ -58,7 +58,7 @@ def find_movies_subdl(title: str):
         else:
             logging.warning(f'Subd api return json with False status. title: {title}')
             return []
-    except requests.RequestsJSONDecodeError:
+    except requests.exceptions.RequestsJSONDecodeError:
         raise SubdlException(f'can not convert Subdl "find subtitle api" results to json {_response.text}')
 
 def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_langs: list[Language]=[],
