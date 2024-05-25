@@ -7,6 +7,7 @@ from general_utility import predict_encoding, ShowProgressUrllib, Movie
 from settings import Settings
 from iso639 import Language
 from typing import List
+from dataclasses import dataclass
 import pysubs2
 
 def find_subtitle(title: str, year: int, languages: List[Language], subdl_api_key: str):
@@ -120,6 +121,14 @@ def sync_subtitle_file(audio_path: Union[str, os.PathLike],subtitle_path: Union[
     else:
         logging.warn(f'ffs can not sync the subtitle.\nsubtitle_path: {subtitle_path}')
         return None
+
+@dataclass
+class SubtitleData:
+    language: Language
+    subtitle_url: str
+    original_path: str
+    sync_path: str
+    movie_id: int
 
 class SubdlException(Exception):
     def __init__(self, message) -> None:
