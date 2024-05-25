@@ -10,6 +10,15 @@ from typing import List
 from dataclasses import dataclass
 import pysubs2
 
+@dataclass
+class SubtitleData:
+    subtitle_url: str = ''
+    original_path: str = ''
+    sync_path: str = ''
+    movie_id: int = -1
+    subdl_movie_name: str = ''
+    language: Language = Settings.UNKNOWN_LANGUAGE
+    
 def find_subtitle(title: str, year: int, languages: List[Language], subdl_api_key: str):
     _languages_subdl = ','.join(list(map(Settings.SUBDL_LANG_CODES, languages)))
     _payload = {'api_key': subdl_api_key,
@@ -50,7 +59,7 @@ def find_movies_subdl(title: str):
 
 def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_langs: list[Language]=[],
                             subtitle_zip_directory: Union[str, os.PathLike] = './', subtitle_directory: Union[str, os.PathLike] = './',
-                            max_posible_movie: int = 1):
+                            max_posible_movie: int = 1) -> SubtitleData:
     _title_subdl, _year_subdl = movie.extract_title_year_from_30nama_title()
     _posible_movies = find_movies_subdl(_title_subdl, _year_subdl)[:max_posible_movie]
     
@@ -83,7 +92,9 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
                     map(lambda x: (x,x.split('.')[-1],), _zip_ref.namelist()))))
                 _zip_ref.extractall(subtitle_directory, members=_subtitle_members)
                 for _subtitle_member in _subtitle_members:
-                    yield os.path.join(subtitle_directory,_subtitle_member), _subtitle_lang
+                    yield SubtitleData(subtitle_url=_zipped_url, language=_subtitle_lang,
+                                       movie_id=movie.ID, subdl_movie_name=_posible_movie,
+                                       original_path=os.path.join(subtitle_directory,_subtitle_member))
 
 
 def download_video_file(download_link: str, video_title: str = '', video_file_directory: Union[str, os.PathLike] = './',
@@ -121,14 +132,6 @@ def sync_subtitle_file(audio_path: Union[str, os.PathLike],subtitle_path: Union[
     else:
         logging.warn(f'ffs can not sync the subtitle.\nsubtitle_path: {subtitle_path}')
         return None
-
-@dataclass
-class SubtitleData:
-    language: Language
-    subtitle_url: str
-    original_path: str
-    sync_path: str
-    movie_id: int
 
 class SubdlException(Exception):
     def __init__(self, message) -> None:
