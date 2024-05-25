@@ -51,22 +51,17 @@ def find_movies_subdl(title: str):
     try:
         _response = requests.get(Settings.SUBDL_SEARCH_MOVIE_URL, params=_payload)
         if _response.status_code != 200:
-            raise SubdlException(f'Subdl "find subtitle api" returned status code was {_response.status_code}')
+            raise SubdlException(f'Subdl "find movies api" returned status code was {_response.status_code}')
         _response_json = _response.json()
-        if _response_json['status']:
-            return _response_json['subtitles']
-        else:
-            logging.warning(f'Subd api return json with False status. title: {title}')
-            return []
+        return _response_json
     except requests.exceptions.JSONDecodeError:
-        raise SubdlException(f'can not convert Subdl "find subtitle api" results to json {_response.text}')
+        raise SubdlException(f'can not convert Subdl "find movies api" results to json {_response.text}')
 
 def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_langs: list[Language]=[],
                             subtitle_zip_directory: Union[str, os.PathLike] = './', subtitle_directory: Union[str, os.PathLike] = './',
                             max_posible_movie: int = 1):
     _title_subdl, _year_subdl = movie.extract_title_year_from_30nama_title()
     _posible_movies = find_movies_subdl(_title_subdl)[:max_posible_movie]
-    
     for idx_posible_movie_id, _posible_movie in enumerate(_posible_movies):
         _subdl_subtitles = find_subtitle(_posible_movie['name'] ,_posible_movie['year'], languages)
         for _subtitle_id, _subtitle in enumerate(_subdl_subtitles):
