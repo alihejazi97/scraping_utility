@@ -92,9 +92,6 @@ class Movie:
         if len(self.download_results[0].download_bars) == 0:
             logging.info(f"{self}\nbeacause movie has 0 download bars it was dropped.")
             return False
-        if len(self.subtitle_results) == 0:
-            logging.info(f"{self}\nbeacause movie has 0 subtitle it was dropped.")
-            return True
         return True
     
     def extract_title_year_from_30nama_title(self):
@@ -141,6 +138,7 @@ def convert_video_to_audio(video_file_path: Union[str, os.PathLike], audio_path:
     if sample_rate:
         output_options['ar'] = sample_rate
     ffmpeg.input(video_file_path).output(audio_path, **output_options).run()
+    return audio_path
 
 def save_json(path: Union[str, os.PathLike], obj):
     with open(path,  'w',  encoding='utf-8') as f:
@@ -299,22 +297,25 @@ def divide_subtitle_list(subtitle_list: Iterable[SSAEvent], continous_list: Iter
     return _subtitle_division_list
 
 def extract_subtitles(video_file_path: Union[str, os.PathLike], subtitle_directory: Union[str, os.PathLike]):
-    _language_subtitles: Dict[str:int] = {}
+    _language_subtitles: Dict[iso639.Language:int] = {}
     for _stream_id, _sub in enumerate(probe(video_file_path).subtitle):
         try:
-            _language = iso639.Language.from_part2b(_sub['tags']['language']).part1
+            _language = iso639.Language.from_part2b(_sub['tags']['language'])
         except:
-            _language = 'xx'
+            _language = Settings.UNKNOWN_LANGUAGE
         
         if _language not in _language_subtitles:
             _language_subtitles[_language] = [_stream_id]
         else:
             _language_subtitles[_language].append(_stream_id)
 
+    _ouptput_result = []
     for _lang, _stream_ids in _language_subtitles.items():
         for _idx, _stream_id in enumerate(_stream_ids):
-            _subtitle_path = os.path.join(subtitle_directory, f'{_lang}_{_idx}.srt')
+            _subtitle_path = os.path.join(subtitle_directory, f'{_lang.part1}_{_idx}.srt')
             ffmpeg.input(video_file_path).output(_subtitle_path, map=f's:{_stream_id}', c='copy').run()
+            _ouptput_result.append((_subtitle_path, _lang,))
+    return _ouptput_result
 
 @default_setting(arguments_key_idx_sname=('lid_model',2,'LID_PIPELINE',))
 def detect_lang(subtitles: SSAFile, lid_model: stanza.pipeline.core.Pipeline=None):

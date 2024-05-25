@@ -61,6 +61,7 @@ class Settings:
     KOREAN = Language.from_part1('ko')
     FINNISH = Language.from_part1('fi')
     URDU = Language.from_part1('ur')
+    UNKNOWN_LANGUAGE = Language.from_part1('vo')
     SONAR_TEXT_LANG_MAP: Dict[Language, str] = {
         PERSIAN : 'sonar_speech_encoder_base_pes', # persian
         ENGLISH : 'sonar_speech_encoder_base_eng', # english

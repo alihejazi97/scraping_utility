@@ -60,17 +60,13 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
             if _subtitle['lang'].lower() in Settings.SUBDL_LANGUAGE_MAP:
                 _subtitle_lang = Settings.SUBDL_LANGUAGE_MAP[_subtitle['lang'].lower()]
             else:
-                logging.warn(f"this language({_subtitle['lang'].lower()}) is  not supported in our snippet but was returned by the api.")
-                continue
+                _subtitle_lang = Settings.UNKNOWN_LANGUAGE
             if _subtitle_lang in processed_langs:
-                continue
-            if (_subtitle_lang not in languages):
-                logging.warn(f"this language ({_subtitle['lang'].lower()}) is not wanted but is in the subdl api results.\npossible movie: {_posible_movie['name']}\nspossible movie year{_posible_movie['year']}\n returned subtitle object : {_subtitle}\n")
                 continue
             if not _subtitle['url']:
                 logging.warn(f"this subtitle has no url.\npossible movie: {_posible_movie['name']}\nspossible movie year{_posible_movie['year']}\n returned subtitle object : {_subtitle}\n")
                 continue
-            _zip_path = os.path.join(subtitle_zip_directory,f'sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang}.zip')
+            _zip_path = os.path.join(subtitle_zip_directory,f'sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang.part1}.zip')
             
             # don't download if file is already downloaded
             if not os.path.isfile(_zip_path):
@@ -88,7 +84,9 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
                 for _subtitle_member in _subtitle_members:
                     yield os.path.join(subtitle_directory,_subtitle_member), _subtitle_lang
 
-def download_video_file(download_link: str, video_file_directory: Union[str, os.PathLike] = './', video_file_name: str = None):
+
+def download_video_file(download_link: str, video_title: str = '', video_file_directory: Union[str, os.PathLike] = './',
+                        video_file_name: str = None) -> str:
     if not os.path.isdir(video_file_directory):
         raise VideoDownloadException(f'video file direcotry({video_file_directory}) does not exists.')
     _original_extention = download_link.split('/')[-1].split('.')[-1]
@@ -97,10 +95,13 @@ def download_video_file(download_link: str, video_file_directory: Union[str, os.
         _video_file_path = os.path.join(video_file_directory, video_file_name + '.' + _original_extention)
     else:
         _video_file_path = os.path.join(video_file_directory, _original_file_name)
+    if os.path.exists(_video_file_path):
+        return _video_file_path
     try:
-        urllib.request.urlretrieve(download_link, _video_file_path, ShowProgressUrllib())
+        urllib.request.urlretrieve(download_link, _video_file_path, ShowProgressUrllib(f'downloading video {video_title}'))
+        return _video_file_path
     except Exception:
-        VideoDownloadException('Today maximum requests have reached its limits.')
+        raise VideoDownloadException('Today maximum requests have reached its limits.')
 
 
 def load_subtitle_file(subtitle_path: Union[str, os.PathLike]) -> pysubs2.SSAFile:
