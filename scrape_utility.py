@@ -94,7 +94,7 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
             try:
                 _zip_ref = zipfile.ZipFile(_zip_path, 'r')
                 _subtitle_members = list(map(lambda x: x[0],filter(lambda x: x[1] in pysubs2.formats.FILE_EXTENSION_TO_FORMAT_IDENTIFIER,
-                map(lambda x: (x,x.split('.')[-1],), _zip_ref.namelist()))))
+                map(lambda x: (x,'.' + x.split('.')[-1],), _zip_ref.namelist()))))
                 _zip_ref.extractall(subtitle_directory, members=_subtitle_members)
                 for _subtitle_member in _subtitle_members:
                     yield SubtitleData(subtitle_url=_zipped_url, language=_subtitle_lang,
