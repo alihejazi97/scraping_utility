@@ -113,13 +113,13 @@ def load_subtitle_file(subtitle_path: Union[str, os.PathLike]) -> pysubs2.SSAFil
         logging.warn(f'subtitle can not be procdessed.\nsubtitle_path: {subtitle_path}\nsubtitle predicted encoding: {_subtitle_encoding}')
         return pysubs2.SSAFile()
 
-def sync_and_load_subtitle_file(audio_path: Union[str, os.PathLike],subtitle_path: Union[str, os.PathLike], sync_path: Union[str, os.PathLike]):
+def sync_subtitle_file(audio_path: Union[str, os.PathLike],subtitle_path: Union[str, os.PathLike], sync_path: Union[str, os.PathLike]):
     subprocess.run(["ffs", audio_path, '-i', subtitle_path, '-o', sync_path])
     if os.path.exists(sync_path):
-        return load_subtitle_file(sync_path)
+        return sync_path
     else:
         logging.warn(f'ffs can not sync the subtitle.\nsubtitle_path: {subtitle_path}')
-        return pysubs2.SSAFile()
+        return None
 
 class SubdlException(Exception):
     def __init__(self, message) -> None:
