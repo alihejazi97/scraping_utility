@@ -32,7 +32,7 @@ class Settings:
     SPEECH_EMBEDDING_COMPUTATION_BATCH_SIZE: int = 4
     TEXT_EMBEDDING_COMPUTATION_BATCH_SIZE: int = 8
     LID_PIPELINE: Pipeline = None
-
+    DEBUG_VAR = None
     PARANTHESIS_REGEX_STR_LIST: List[str] = [r'(\[[\S\s]*\])',r'(\][\S\s]*\[)',r'(\)[\S\s]*\()',r'(\([\S\s]*\))']
     PARANTHESIS_REGEX: re.Pattern = re.compile(r'|'.join(PARANTHESIS_REGEX_STR_LIST))
     LEADING_TRAILING_WHITESPACE_REGEX: re.Pattern = re.compile(r'^\s+|\s+$')
