@@ -16,6 +16,7 @@ class SubtitleData:
     original_path: str = ''
     sync_path: str = ''
     movie_id: int = -1
+    status: bool = False
     subdl_movie_name: str = ''
     language: Language = Settings.UNKNOWN_LANGUAGE
 
@@ -98,10 +99,13 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
                 _zip_ref.extractall(subtitle_directory, members=_subtitle_members)
                 for _subtitle_member in _subtitle_members:
                     yield SubtitleData(subtitle_url=_zipped_url, language=_subtitle_lang,
-                                    movie_id=movie.ID, subdl_movie_name=_posible_movie,
+                                    movie_id=movie.ID, subdl_movie_name=_posible_movie, status=True,
                                     original_path=os.path.join(subtitle_directory,_subtitle_member))
             except:
-                logging.warning(f'following subtitle is corrupted.\n{SubtitleData(subtitle_url=_zipped_url, language=_subtitle_lang,movie_id=movie.ID, subdl_movie_name=_posible_movie)}')
+                logging.warning(f'following subtitle is corrupted (subtitle_url={_zipped_url}).')
+                yield SubtitleData(subtitle_url=_zipped_url, language=_subtitle_lang,
+                                    movie_id=movie.ID, subdl_movie_name=_posible_movie, status=False,
+                                    original_path=os.path.join(subtitle_directory,_subtitle_member))
 
 
 def download_video_file(download_link: str, video_title: str = '', video_file_directory: Union[str, os.PathLike] = './',
