@@ -7,6 +7,7 @@ import chardet
 from typing import Dict, Iterable
 from tqdm.notebook import tqdm
 import stanza
+import shutil
 from ffprobe3 import probe
 from pysubs2 import SSAFile, SSAEvent
 from pysubs2.time import ms_to_str
@@ -125,7 +126,10 @@ class Movie:
             return _minsize_index_encoder_30nama, _minsize_item_encoder_30nama
         return _minsize_index, _minsize_item
 
-
+def copy_file_with_extention(src,dst):
+    original_extention = src.split('/')[-1].split('.')[-1]
+    shutil.copyfile(src,dst+original_extention)
+    return dst+original_extention
 
 
 
