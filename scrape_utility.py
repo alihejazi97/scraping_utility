@@ -44,7 +44,7 @@ def sort_posible_movies(response_json, title: str, year: int):
         _posible_movie['score'] = editdistance.eval(title, _posible_movie['name'])
         if _posible_movie['year'] == year:
             _posible_movie['score'] = _posible_movie['score'] - 5
-    response_json['results'].sort(key=lambda x: x['score'])
+    return response_json['results'].sort(key=lambda x: x['score'])
 
 def find_movies_subdl(title: str):
     _payload = {'query' : title}
@@ -61,7 +61,7 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
                             subtitle_zip_directory: Union[str, os.PathLike] = './', subtitle_directory: Union[str, os.PathLike] = './',
                             max_posible_movie: int = 1):
     _title_subdl, _year_subdl = movie.extract_title_year_from_30nama_title()
-    _posible_movies = find_movies_subdl(_title_subdl)[:max_posible_movie]
+    _posible_movies = sort_posible_movies(find_movies_subdl(_title_subdl), _title_subdl, _year_subdl)[:max_posible_movie]
     for idx_posible_movie_id, _posible_movie in enumerate(_posible_movies):
         _subdl_subtitles = find_subtitle(_posible_movie['name'] ,_posible_movie['year'], languages)
         for _subtitle_id, _subtitle in enumerate(_subdl_subtitles):
