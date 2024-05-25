@@ -4,7 +4,7 @@ import requests, urllib.request
 import logging
 import editdistance
 from general_utility import predict_encoding, ShowProgressUrllib, Movie
-from settings import Settings
+from settings import Settings, default_setting
 from iso639 import Language
 from typing import List
 from dataclasses import dataclass
@@ -19,6 +19,7 @@ class SubtitleData:
     subdl_movie_name: str = ''
     language: Language = Settings.UNKNOWN_LANGUAGE
 
+@default_setting(arguments_key_idx_sname=('subdl_api_key',4,'SUBDL_API_KEYS',))
 def find_subtitle(title: str, year: int, languages: List[Language], subdl_api_key: str):
     _languages_subdl = ','.join(list(map(Settings.SUBDL_LANG_CODES, languages)))
     _payload = {'api_key': subdl_api_key,
