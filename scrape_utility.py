@@ -35,9 +35,9 @@ def find_subtitle(title: str, year: int, languages: List[Language], subdl_api_ke
         _response = requests.get(Settings.SUBDL_SEARCH_SUBTITLE_URL, params=_payload)
         if _response.status_code != 200:
             raise SubdlException(f'Subdl "find subtitle api" returned status code was {_response.status_code}')
-        _response_json = _response.json()
-        if _response_json['status']:
-            return _response_json['subtitles']
+        _respons_json = _response.json()
+        if _respons_json['status']:
+            return _respons_json['subtitles']
         else:
             logging.warning(f'Subdl "find subtitle api" has no result(status code is false) for movie={title} ### year={year}')
             return []            
