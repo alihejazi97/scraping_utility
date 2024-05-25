@@ -44,7 +44,8 @@ def sort_posible_movies(response_json, title: str, year: int):
         _posible_movie['score'] = editdistance.eval(title, _posible_movie['name'])
         if _posible_movie['year'] == year:
             _posible_movie['score'] = _posible_movie['score'] - 5
-    return response_json['results'].sort(key=lambda x: x['score'])
+    response_json['results'].sort(key=lambda x: x['score'])
+    return response_json['results']
 
 def find_movies_subdl(title: str):
     _payload = {'query' : title}
