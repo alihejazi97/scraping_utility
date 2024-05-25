@@ -133,7 +133,7 @@ def copy_file_with_extention(src,dst):
 
 
 
-@default_setting(arguments_key_idx_sname=('sample_rate',4,'SAMPLE_RATE',))
+@default_setting(arguments_key_idx_sname=[('sample_rate',4,'SAMPLE_RATE',)])
 def convert_video_to_audio(video_file_path: Union[str, os.PathLike], audio_path: Union[str, os.PathLike], mono: bool,
                            sample_rate: int):
     output_options = {}
@@ -176,7 +176,7 @@ class ShowProgressUrllib:
             self._tqdm_pbar.close()
             self._pre_block_num = -1
 
-@default_setting(arguments_key_idx_sname=('sample_rate',3,'SAMPLE_RATE',))
+@default_setting(arguments_key_idx_sname=[('sample_rate',3,'SAMPLE_RATE',)])
 def extract_segment_from_array(audio_array: np.array, subtitle: SSAEvent, sample_rate: int) -> np.array:
     _segment_start_index = int(subtitle.start * (sample_rate / 1000))
     _segment_end_index = int(subtitle.end * (sample_rate / 1000))
@@ -187,7 +187,7 @@ def extract_segment_from_array(audio_array: np.array, subtitle: SSAEvent, sample
     else:
         return np.zeros(shape=(_min_length,), dtype=np.float32)
 
-@default_setting(arguments_key_idx_sname=('sample_rate',3,'SAMPLE_RATE',))
+@default_setting(arguments_key_idx_sname=[('sample_rate',3,'SAMPLE_RATE',)])
 def show_parallel_data(audio_array: np.array, subtitle: SSAEvent, sample_rate: int) -> None:
     print(f'subtitle : {subtitle.content}')
     _audio_array = extract_segment_from_array(audio_array, sample_rate, subtitle)
@@ -246,7 +246,7 @@ def zip_wavs(movie: Movie):
             _zipf.write(_wav, _wav.split('/')[-1], compress_type=zipfile.ZIP_DEFLATED)
             os.remove(_wav)
 
-@default_setting(arguments_key_idx_sname=('sample_rate', 8, 'SAMPLE_RATE',))
+@default_setting(arguments_key_idx_sname=[('sample_rate', 8, 'SAMPLE_RATE',)])
 def save_results(movie: Movie, audio_array: np.array, movie_in_minutes,
                  movie_in_seconds, final_subtitles: Iterable[SSAEvent], subtitle_lang: str,
                  similarities: np.array, sample_rate: float):
@@ -321,7 +321,7 @@ def extract_subtitles(video_file_path: Union[str, os.PathLike], subtitle_directo
             _ouptput_result.append((_subtitle_path, _lang,))
     return _ouptput_result
 
-@default_setting(arguments_key_idx_sname=('lid_model',2,'LID_PIPELINE',))
+@default_setting(arguments_key_idx_sname=[('lid_model',2,'LID_PIPELINE',)])
 def detect_lang(subtitles: SSAFile, lid_model: stanza.pipeline.core.Pipeline=None):
     concat_all_content = ''
     for sub in subtitles:
