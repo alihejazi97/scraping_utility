@@ -84,7 +84,7 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
             _zip_path = os.path.join(subtitle_zip_directory,f'sub_{idx_posible_movie_id}_{_subtitle_id}_{_subtitle_lang.part1}.zip')
             
             # don't download if file is already downloaded
-            _zipped_url = Settings.SUBDL_SUBTITLE_DOWNLOAD_URL + '/' + _subtitle['url']
+            _zipped_url = Settings.SUBDL_SUBTITLE_DOWNLOAD_URL + _subtitle['url']
             if not os.path.isfile(_zip_path):
                 try:
                     urllib.request.urlretrieve(_zipped_url,_zip_path)
