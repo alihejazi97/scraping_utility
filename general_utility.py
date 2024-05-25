@@ -128,7 +128,7 @@ class Movie:
 
 def copy_file_with_extention(src,dst):
     original_extention = src.split('/')[-1].split('.')[-1]
-    shutil.copyfile(src,dst+original_extention)
+    shutil.copyfile(src,dst + '.' + original_extention)
     return original_extention
 
 
