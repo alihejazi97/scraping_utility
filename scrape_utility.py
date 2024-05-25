@@ -21,7 +21,7 @@ class SubtitleData:
 
 @default_setting(arguments_key_idx_sname=[('subdl_api_key',4,'SUBDL_API_KEYS',)])
 def find_subtitle(title: str, year: int, languages: List[Language], subdl_api_key: str=None):
-    _languages_subdl = ','.join(list(map(Settings.SUBDL_LANG_CODES, languages)))
+    _languages_subdl = ','.join(list(map(Settings.SUBDL_LANG_CODES.__getitem__, languages)))
     _payload = {'api_key': subdl_api_key,
                 'film_name' : title,
                 'languages' : _languages_subdl}
