@@ -57,6 +57,7 @@ def find_movies_subdl(title: str):
             return _response_json['subtitles']
         else:
             logging.warning(f'Subd api return json with False status. title: {title}')
+            return []
     except requests.RequestsJSONDecodeError:
         raise SubdlException(f'can not convert Subdl "find subtitle api" results to json {_response.text}')
 
