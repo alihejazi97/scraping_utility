@@ -106,7 +106,7 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
                 logging.warning(f'following subtitle is corrupted (subtitle_url={_zipped_url}).')
                 yield SubtitleData(subtitle_url=_zipped_url, language=_subtitle_lang,
                                     movie_id=movie.ID, subdl_movie_name=_posible_movie, status=False,
-                                    original_path=os.path.join(subtitle_directory,_subtitle_member))
+                                    original_path=subtitle_directory)
 
 
 def download_video_file(download_link: str, video_title: str = '', video_file_directory: Union[str, os.PathLike] = './',
