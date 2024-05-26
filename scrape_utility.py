@@ -29,7 +29,8 @@ def find_subtitle(title: str, year: int, languages: List[Language], subdl_api_ke
     _languages_subdl = ','.join(_languages_subdl)
     _payload = {'api_key': subdl_api_key,
                 'film_name' : title,
-                'languages' : _languages_subdl}
+                'languages' : _languages_subdl,
+                'subs_per_page': 30}
     if type(year) == int and year >= 1800 and year <= 2024:
         _payload['year'] = year   
     try:
