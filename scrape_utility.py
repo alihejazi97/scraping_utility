@@ -1,5 +1,5 @@
 import os, zipfile, subprocess
-from typing import Union
+from typing import Union, Dict
 import requests, urllib.request
 import logging
 import editdistance
@@ -9,6 +9,8 @@ from iso639 import Language
 from typing import List
 from dataclasses import dataclass
 import pysubs2
+from ffprobe3 import probe
+import ffmpeg, iso639
 
 @dataclass
 class SubtitleData:
@@ -126,6 +128,30 @@ def download_video_file(download_link: str, video_title: str = '', video_file_di
         return _video_file_path
     except Exception:
         raise VideoDownloadException('Today maximum requests have reached its limits.')
+
+
+def extract_subtitles(video_file_path: Union[str, os.PathLike], subtitle_directory: Union[str, os.PathLike]):
+    _language_subtitles: Dict[iso639.Language:int] = {}
+    for _stream_id, _sub in enumerate(probe(video_file_path).subtitle):
+        try:
+            _language = iso639.Language.from_part2b(_sub['tags']['language'])
+        except:
+            _language = Settings.UNKNOWN_LANGUAGE
+        
+        if _language not in _language_subtitles:
+            _language_subtitles[_language] = [_stream_id]
+        else:
+            _language_subtitles[_language].append(_stream_id)
+
+    _ouptput_result = []
+    for _lang, _stream_ids in _language_subtitles.items():
+        for _idx, _stream_id in enumerate(_stream_ids):
+            _subtitle_path = os.path.join(subtitle_directory, f'{_lang.part1}_{_idx}.srt')
+            ffmpeg.input(video_file_path).output(_subtitle_path, map=f's:{_stream_id}', c='copy').run()
+            _ouptput_result.append(SubtitleData(subtitle_url='extracted subtitles', language=_lang,
+                                    movie_id=-1, subdl_movie_name='', status=True,
+                                    original_path=_subtitle_path))
+    return _ouptput_result
 
 
 def load_subtitle_file(subtitle_path: Union[str, os.PathLike]) -> pysubs2.SSAFile:
