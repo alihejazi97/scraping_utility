@@ -16,7 +16,7 @@ def default_setting(arguments_key_idx_sname):
     def decorator(func):
         def wrapper(*args, **kwargs):
             for argument_key, argument_index, setting_name in arguments_key_idx_sname:
-                if len(args) <= argument_index:
+                if argument_index > len(args):
                     if argument_key not in kwargs:
                         kwargs[argument_key] = Settings.__getattribute__(Settings, setting_name)
             return func(*args, **kwargs)
