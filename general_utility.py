@@ -18,6 +18,7 @@ import pandas as pd
 import numpy as np
 from shutil import make_archive
 from settings import Settings, default_setting
+from scrape_utility import SubtitleData
 import iso639
 import ffmpeg
 
@@ -318,7 +319,9 @@ def extract_subtitles(video_file_path: Union[str, os.PathLike], subtitle_directo
         for _idx, _stream_id in enumerate(_stream_ids):
             _subtitle_path = os.path.join(subtitle_directory, f'{_lang.part1}_{_idx}.srt')
             ffmpeg.input(video_file_path).output(_subtitle_path, map=f's:{_stream_id}', c='copy').run()
-            _ouptput_result.append((_subtitle_path, _lang,))
+            _ouptput_result.append(SubtitleData(subtitle_url='extracted subtitles', language=_lang,
+                                    movie_id=-1, subdl_movie_name='', status=True,
+                                    original_path=_subtitle_path))
     return _ouptput_result
 
 @default_setting(arguments_key_idx_sname=[('lid_model',2,'LID_PIPELINE',)])
