@@ -24,15 +24,20 @@ class SubtitleData:
 
 @default_setting(arguments_key_idx_sname=[('subdl_api_key',4,'SUBDL_API_KEYS',)])
 def find_subtitle(title: str, year: int, languages: List[Language], subdl_api_key: str=None):
-    _languages_subdl = []
-    for _lang in languages:
-        for _lang_code in Settings.SUBDL_LANG_CODES[_lang]:
-            _languages_subdl.append(_lang_code)
-    _languages_subdl = ','.join(_languages_subdl)
-    _payload = {'api_key': subdl_api_key,
-                'film_name' : title,
-                'languages' : _languages_subdl,
-                'subs_per_page': 30}
+    if languages:
+        _languages_subdl = []
+        for _lang in languages:
+            for _lang_code in Settings.SUBDL_LANG_CODES[_lang]:
+                _languages_subdl.append(_lang_code)
+        _languages_subdl = ','.join(_languages_subdl)
+        _payload = {'api_key': subdl_api_key,
+                    'film_name' : title,
+                    'languages' : _languages_subdl,
+                    'subs_per_page': 30}
+    else:
+        _payload = {'api_key': subdl_api_key,
+                    'film_name' : title,
+                    'subs_per_page': 30}
     if type(year) == int and year >= 1800 and year <= 2024:
         _payload['year'] = year   
     try:
@@ -73,7 +78,14 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
     _title_subdl, _year_subdl = movie.extract_title_year_from_30nama_title()
     _posible_movies = sort_posible_movies(find_movies_subdl(_title_subdl), _title_subdl, _year_subdl)[:max_posible_movie]
     for idx_posible_movie_id, _posible_movie in enumerate(_posible_movies):
-        _subdl_subtitles = find_subtitle(_posible_movie['name'] ,_posible_movie['year'], languages)
+        _subdl_subtitles = find_subtitle(_posible_movie['name'] ,_posible_movie['year'], None)
+        if len(_subdl_subtitles) >= 30:
+            logging.info(f'movie {movie.title} has more than 30 no lang subdl api result.')
+            _subdl_general_req_urls = [_x['url'] for _x in _subdl_subtitles]
+            _subdl_subtitles_specific = find_subtitle(_posible_movie['name'] ,_posible_movie['year'], languages)
+            for _sub in _subdl_subtitles_specific:
+                if _sub['url'] not in _subdl_general_req_urls:
+                    _subdl_subtitles.append(_sub)
         for _subtitle_id, _subtitle in enumerate(_subdl_subtitles):
             if _subtitle['lang'].lower() in Settings.SUBDL_LANGUAGE_MAP:
                 _subtitle_lang = Settings.SUBDL_LANGUAGE_MAP[_subtitle['lang'].lower()]
