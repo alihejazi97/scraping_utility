@@ -9,6 +9,7 @@ from iso639 import Language
 from typing import List
 from dataclasses import dataclass
 import pysubs2
+import time
 from ffprobe3 import probe
 import ffmpeg, iso639
 
@@ -82,6 +83,7 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
         if len(_subdl_subtitles) >= 30:
             logging.info(f'movie {movie.title} has more than 30 no lang subdl api result.')
             _subdl_general_req_urls = [_x['url'] for _x in _subdl_subtitles]
+            time.sleep(Settings.SUBDL_SLEEP_TIME)
             _subdl_subtitles_specific = find_subtitle(_posible_movie['name'] ,_posible_movie['year'], languages)
             for _sub in _subdl_subtitles_specific:
                 if _sub['url'] not in _subdl_general_req_urls:

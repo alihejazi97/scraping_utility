@@ -25,7 +25,7 @@ def default_setting(arguments_key_idx_sname):
 
 class Settings:  
     SAMPLE_RATE: float = 16_000
-    SUBDL_SLEEP_TIME: float = 0.5
+    SUBDL_SLEEP_TIME: float = 1
     SIMILARITY_MEASURE = CosineSimilarity(dim=1, eps=1e-6)
     AUDIO_MIN_LENGTH: float = 0.2 # in seconds
     OPENAI_API_KEYS: Union[str, List[str]] = None
