@@ -117,13 +117,39 @@ class Movie:
                 _minsize_item = _download_bar
                 _minsize_index = _minsize_idx
         return _minsize_item, _minsize_index
+    
+    def get_sorted_download_bars(self, encoder : str = None, reverse: bool = True):
+        if encoder:
+            _idx_download_bars = []
+            for _idx, _download_bar in enumerate(self.download_results[0].download_bars):
+                if encoder:
+                    if _download_bar.encoder.lower() == encoder.lower():
+                        _idx_download_bars.append((_idx, _download_bar,))
+                else:
+                    _idx_download_bars.append((_idx, _download_bar,))
+        return sorted(_idx_download_bars, key=lambda x: x[1].size, reverse=reverse)
+
+    # def get_best_download_bar(self):
+    #     _minsize_item, _minsize_index = self.get_min_download_bar()
+    #     _minsize_item_encoder_30nama, _minsize_index_encoder_30nama = self.get_min_download_bar('30nama')
+    #     if _minsize_item_encoder_30nama:
+    #         return _minsize_index_encoder_30nama, _minsize_item_encoder_30nama
+    #     return _minsize_index, _minsize_item
 
     def get_best_download_bar(self):
-        _minsize_item, _minsize_index = self.get_min_download_bar()
-        _minsize_item_encoder_30nama, _minsize_index_encoder_30nama = self.get_min_download_bar('30nama')
-        if _minsize_item_encoder_30nama:
-            return _minsize_index_encoder_30nama, _minsize_item_encoder_30nama
-        return _minsize_index, _minsize_item
+        for _idx, _download_bar in self.get_sorted_download_bars('30nama'):
+            if _download_bar.size < Settings.DOWNLOAD_SIZE_THRESH:
+                return _idx, _download_bar
+        for _idx, _download_bar in self.get_sorted_download_bars():
+            if _download_bar.size < Settings.DOWNLOAD_SIZE_THRESH:
+                return _idx, _download_bar
+        for _idx, _download_bar in self.get_sorted_download_bars('30nama', False):
+            if _download_bar.size > Settings.DOWNLOAD_SIZE_THRESH:
+                return _idx, _download_bar
+        for _idx, _download_bar in self.get_sorted_download_bars(reverse=False):
+            if _download_bar.size > Settings.DOWNLOAD_SIZE_THRESH:
+                return _idx, _download_bar
+        
 
 def copy_file_with_extention(src,dst):
     original_extention = src.split('/')[-1].split('.')[-1]
