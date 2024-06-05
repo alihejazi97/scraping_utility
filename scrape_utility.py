@@ -161,10 +161,13 @@ def extract_subtitles(video_file_path: Union[str, os.PathLike], subtitle_directo
     for _lang, _stream_ids in _language_subtitles.items():
         for _idx, _stream_id in enumerate(_stream_ids):
             _subtitle_path = os.path.join(subtitle_directory, f'{_lang.part1}_{_idx}.srt')
-            ffmpeg.input(video_file_path).output(_subtitle_path, map=f's:{_stream_id}', c='copy').run()
-            _ouptput_result.append(SubtitleData(subtitle_url='extracted subtitles', language=_lang,
+            try:
+                ffmpeg.input(video_file_path).output(_subtitle_path, map=f's:{_stream_id}', c='copy').run()
+                _ouptput_result.append(SubtitleData(subtitle_url='extracted subtitles', language=_lang,
                                     movie_id=-1, subdl_movie_name='', status=True,
                                     original_path=_subtitle_path))
+            except Exception:
+                continue
     return _ouptput_result
 
 
