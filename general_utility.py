@@ -119,14 +119,13 @@ class Movie:
         return _minsize_item, _minsize_index
     
     def get_sorted_download_bars(self, encoder : str = None, reverse: bool = True):
-        if encoder:
-            _idx_download_bars = []
-            for _idx, _download_bar in enumerate(self.download_results[0].download_bars):
-                if encoder:
-                    if _download_bar.encoder.lower() == encoder.lower():
-                        _idx_download_bars.append((_idx, _download_bar,))
-                else:
+        _idx_download_bars = []
+        for _idx, _download_bar in enumerate(self.download_results[0].download_bars):
+            if encoder:
+                if _download_bar.encoder.lower() == encoder.lower():
                     _idx_download_bars.append((_idx, _download_bar,))
+            else:
+                _idx_download_bars.append((_idx, _download_bar,))
         return sorted(_idx_download_bars, key=lambda x: x[1].size, reverse=reverse)
 
     # def get_best_download_bar(self):
