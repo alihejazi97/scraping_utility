@@ -123,6 +123,32 @@ def download_subtitle_subdl(movie: Movie, languages: list[Language], processed_l
                 yield SubtitleData(subtitle_url=_zipped_url, language=_subtitle_lang,
                                     movie_id=movie.ID, subdl_movie_name=_posible_movie, status=False,
                                     original_path=subtitle_directory)
+                
+def download_subtitle_series(movie_id, zipped_url, subtitle_zip_directory, subtitle_directory):
+    _subtitle_lang = Settings.PERSIAN
+    _zipped_url = zipped_url
+    _zip_path = os.path.join(subtitle_zip_directory,f'sub_series_{_subtitle_lang.part1}.zip')
+    if not os.path.isfile(_zip_path):
+        try:
+            urllib.request.urlretrieve(_zipped_url,_zip_path)
+        except Exception:
+            raise SubdlException(f'can not retrive following subtitle :{_zipped_url}')
+    
+    # extracting zip file
+    _subtitle_results = []
+    try:
+        _zip_ref = zipfile.ZipFile(_zip_path, 'r')
+        _subtitle_members = list(map(lambda x: x[0],filter(lambda x: x[1] in pysubs2.formats.FILE_EXTENSION_TO_FORMAT_IDENTIFIER,
+        map(lambda x: (x,'.' + x.split('.')[-1],), _zip_ref.namelist()))))
+        _zip_ref.extractall(subtitle_directory, members=_subtitle_members)
+        for _subtitle_member in _subtitle_members:
+            _subtitle_results.append(SubtitleData(subtitle_url=_zipped_url, language=_subtitle_lang,
+                            movie_id=movie_id, subdl_movie_name=-1, status=True,
+                            original_path=os.path.join(subtitle_directory,_subtitle_member)))
+    except:
+        logging.warning(f'following subtitle is corrupted (subtitle_url={_zipped_url}).')
+    
+    return _subtitle_results
 
 
 def download_video_file(download_link: str, video_title: str = '', video_file_directory: Union[str, os.PathLike] = './',
