@@ -6,7 +6,7 @@ setup(
     name="scraping_utility",
     version="0.0.10",
     description="An id generator that generated various types and lengths ids",
-    packages=['src'],
+    packages=['scraping_utility'],
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="aliagha",
