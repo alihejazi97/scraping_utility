@@ -1,4 +1,3 @@
-import torch
 from torch.nn import CosineSimilarity
 import re
 from typing import List, Dict, Union
