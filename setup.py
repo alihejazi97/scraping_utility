@@ -3,10 +3,10 @@ from setuptools import find_packages, setup
 long_description = 'don"t bother'
 
 setup(
-    name="idgenerator",
+    name="scraping_utility",
     version="0.0.10",
     description="An id generator that generated various types and lengths ids",
-    package_dir={"scraping_utility": "src"},
+    packages=['src'],
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="aliagha",
