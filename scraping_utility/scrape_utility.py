@@ -3,8 +3,8 @@ from typing import Union, Dict
 import requests, urllib.request
 import logging
 import editdistance
-from general_utility import predict_encoding, ShowProgressUrllib, Movie
-from settings import Settings, default_setting
+from scraping_utility.general_utility import predict_encoding, ShowProgressUrllib, Movie
+from scraping_utility.settings import Settings, default_setting
 from iso639 import Language
 from typing import List
 from dataclasses import dataclass

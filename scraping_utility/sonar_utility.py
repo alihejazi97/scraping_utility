@@ -3,7 +3,7 @@ import pysubs2
 import  torch
 from torch.nn import Module
 import numpy as np
-from settings import Settings, default_setting
+from scraping_utility.settings import Settings, default_setting
 from sonar.inference_pipelines.speech import SpeechToEmbeddingModelPipeline
 from sonar.inference_pipelines.text import TextToEmbeddingModelPipeline
 from typing import  Iterable

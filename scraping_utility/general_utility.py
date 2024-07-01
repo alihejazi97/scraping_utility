@@ -16,7 +16,7 @@ import soundfile as sf
 import pandas as pd
 import numpy as np
 from shutil import make_archive
-from settings import Settings, default_setting
+from scraping_utility.settings import Settings, default_setting
 import iso639
 import ffmpeg
 
